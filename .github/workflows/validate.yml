@@ -24,6 +24,17 @@ jobs:
     name: HACS
     runs-on: ubuntu-latest
     steps:
+      # hacs/action reads hacs.json and manifest.json from raw.githubusercontent.com
+      # without a token, so both checks get a 404 while the repository is private.
+      - name: Skip checks that cannot read a private repository
+        id: private
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private)" = "true" ]; then
+            echo "ignore=hacsjson integration_manifest" >> "$GITHUB_OUTPUT"
+          fi
       - uses: hacs/action@main
         with:
           category: integration
+          ignore: ${{ steps.private.outputs.ignore }}
