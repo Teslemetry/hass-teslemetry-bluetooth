@@ -137,10 +137,15 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
     def _update_max_from_coordinator(self) -> None:
         """Read the maximum from Teslemetry's vehicle coordinator data."""
         value = self.vehicle.data.coordinator.data.get(self.entity_description.max_key)
+        self._set_max(value if isinstance(value, (int, float)) else None)
+
+    def _set_max(self, value: float | None) -> None:
+        """Use the car's maximum, or the fixed one when it is unknown or invalid."""
+        description = self.entity_description
         self._attr_native_max_value = (
             value
-            if isinstance(value, (int, float))
-            else self.entity_description.native_max_value
+            if value is not None and value >= (description.native_min_value or 0)
+            else description.native_max_value
         )
 
     @callback
@@ -155,9 +160,9 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
         value = event["data"][self.entity_description.max_field]
         # Some vehicles stream integers as strings.
         try:
-            self._attr_native_max_value = int(value)
+            self._set_max(int(value))
         except TypeError, ValueError:
-            self._attr_native_max_value = self.entity_description.native_max_value
+            self._set_max(None)
         self.async_write_ha_state()
 
     @override

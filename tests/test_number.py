@@ -63,6 +63,10 @@ async def test_streaming_max(hass: HomeAssistant, teslemetry: FakeTeslemetry) ->
     teslemetry.stream.send({"ChargeCurrentRequestMax": 32})
     teslemetry.stream.send({"ChargeCurrentRequestMax": "bad"})
     assert _limits(hass, CHARGING_AMPS) == (0, 48)
+    # A maximum below the minimum is not a usable range.
+    teslemetry.stream.send({"ChargeCurrentRequestMax": 32})
+    teslemetry.stream.send({"ChargeCurrentRequestMax": -1})
+    assert _limits(hass, CHARGING_AMPS) == (0, 48)
     # The stream has no charge limit maximum, so Teslemetry's coordinator is unused.
     teslemetry.coordinator.async_set_updated_data(
         {"charge_state_charge_limit_soc_max": 90}
@@ -107,6 +111,15 @@ async def test_polling_max(
     )
     assert _limits(hass, CHARGING_AMPS) == (0, 24)
     # Unknown again: back to the fixed maximum.
+    assert _limits(hass, CHARGE_LIMIT) == (50, 100)
+
+    # A maximum below the minimum is not a usable range.
+    teslemetry.coordinator.async_set_updated_data(
+        {
+            "charge_state_charge_current_request_max": 24,
+            "charge_state_charge_limit_soc_max": 0,
+        }
+    )
     assert _limits(hass, CHARGE_LIMIT) == (50, 100)
 
     # The stream does not drive a polled car.
