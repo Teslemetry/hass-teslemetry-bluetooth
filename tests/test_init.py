@@ -686,5 +686,4 @@ async def test_wake_failure(hass: HomeAssistant, teslemetry: FakeTeslemetry) -> 
         )
     assert exc.value.translation_key == "bluetooth_failed"
     teslemetry.bluetooth.wake_up.assert_awaited_once_with()
-    teslemetry.cloud.wake_up.assert_not_called()
     teslemetry.assert_cloud_unused()
