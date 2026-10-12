@@ -15,7 +15,7 @@ from pytest_homeassistant_custom_component.common import (
 from tesla_fleet_api.router import VehicleRouter
 
 from custom_components.teslemetry_bluetooth.const import COMMANDS, DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -120,7 +120,17 @@ def teslemetry_entry(
     hass: HomeAssistant, teslemetry: FakeTeslemetry
 ) -> MockConfigEntry:
     """Add a Teslemetry entry."""
-    entry = MockConfigEntry(domain="teslemetry")
+    entry = MockConfigEntry(
+        domain="teslemetry",
+        subentries_data=[
+            ConfigSubentryData(
+                data={"vin": VIN, "address": ADDRESS},
+                subentry_type="vehicle",
+                title="Test Car",
+                unique_id=VIN,
+            )
+        ],
+    )
     entry.add_to_hass(hass)
     return entry
 
