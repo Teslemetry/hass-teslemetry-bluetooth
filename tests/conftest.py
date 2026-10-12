@@ -27,7 +27,8 @@ VIN = "LRWYGCEK1PC000001"
 ADDRESS = "AA:BB:CC:DD:EE:FF"
 SUCCESS = {"response": {"result": True, "reason": ""}}
 
-# Teslemetry's own entities that some Bluetooth buttons follow, as (platform, key).
+# Teslemetry's own entities that some Bluetooth buttons and selects follow, as
+# (platform, key).
 TESLEMETRY_ENTITIES = (
     ("button", "flash_lights"),
     ("button", "honk"),
@@ -37,6 +38,16 @@ TESLEMETRY_ENTITIES = (
     ("update", "vehicle_state_software_update_status"),
     ("cover", "vehicle_state_sun_roof_state"),
     ("cover", "tonneau"),
+    ("select", "climate_state_seat_heater_left"),
+    ("select", "climate_state_seat_heater_right"),
+    ("select", "climate_state_seat_heater_rear_left"),
+    ("select", "climate_state_seat_heater_rear_center"),
+    ("select", "climate_state_seat_heater_rear_right"),
+    ("select", "climate_state_seat_heater_third_row_left"),
+    ("select", "climate_state_seat_heater_third_row_right"),
+    ("select", "climate_state_steering_wheel_heat_level"),
+    ("select", "climate_state_seat_fan_front_left"),
+    ("select", "climate_state_seat_fan_front_right"),
 )
 
 VENT_WINDOWS = "button.test_car_vent_windows_bluetooth"

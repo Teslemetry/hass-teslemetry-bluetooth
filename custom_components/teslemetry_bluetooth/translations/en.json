@@ -181,6 +181,95 @@
           "medium": "35 °C",
           "high": "40 °C"
         }
+      },
+      "climate_state_seat_heater_left": {
+        "name": "Seat heater front left (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_heater_right": {
+        "name": "Seat heater front right (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_heater_rear_left": {
+        "name": "Seat heater rear left (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_heater_rear_center": {
+        "name": "Seat heater rear center (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_heater_rear_right": {
+        "name": "Seat heater rear right (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_heater_third_row_left": {
+        "name": "Seat heater third row left (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_heater_third_row_right": {
+        "name": "Seat heater third row right (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_steering_wheel_heat_level": {
+        "name": "Steering wheel heater (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_fan_front_left": {
+        "name": "Seat cooler front left (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "climate_state_seat_fan_front_right": {
+        "name": "Seat cooler front right (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
       }
     }
   },

@@ -54,7 +54,17 @@
     "select": {
       "set_climate_keeper_mode": { "default": "mdi:fan" },
       "set_cabin_overheat_protection": { "default": "mdi:sun-thermometer" },
-      "set_cop_temp": { "default": "mdi:thermometer-high" }
+      "set_cop_temp": { "default": "mdi:thermometer-high" },
+      "climate_state_seat_heater_left": { "default": "mdi:car-seat-heater" },
+      "climate_state_seat_heater_right": { "default": "mdi:car-seat-heater" },
+      "climate_state_seat_heater_rear_left": { "default": "mdi:car-seat-heater" },
+      "climate_state_seat_heater_rear_center": { "default": "mdi:car-seat-heater" },
+      "climate_state_seat_heater_rear_right": { "default": "mdi:car-seat-heater" },
+      "climate_state_seat_heater_third_row_left": { "default": "mdi:car-seat-heater" },
+      "climate_state_seat_heater_third_row_right": { "default": "mdi:car-seat-heater" },
+      "climate_state_steering_wheel_heat_level": { "default": "mdi:steering" },
+      "climate_state_seat_fan_front_left": { "default": "mdi:car-seat-cooler" },
+      "climate_state_seat_fan_front_right": { "default": "mdi:car-seat-cooler" }
     }
   }
 }

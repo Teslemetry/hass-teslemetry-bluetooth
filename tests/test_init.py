@@ -64,6 +64,7 @@ from .conftest import (
     setup_integration,
 )
 from .test_button import SWITCH_BUTTONS
+from .test_select import SELECTS as SEAT_SELECTS
 
 WAKE = "button.test_car_wake_bluetooth"
 START_CHARGING = "button.test_car_start_charging_bluetooth"
@@ -703,7 +704,9 @@ async def test_unpaired_vehicle_entities_removed(
     await setup_integration(hass)
     assert _entity_ids(hass, config_entry) == {
         entity_id for entity_id, *_ in ENTITY_COMMANDS
-    } | {f"button.test_car_{name}_bluetooth" for name, *_ in SWITCH_BUTTONS}
+    } | {f"button.test_car_{name}_bluetooth" for name, *_ in SWITCH_BUTTONS} | {
+        entity_id for entity_id, *_ in SEAT_SELECTS
+    }
 
     # Removing the Bluetooth subentry reloads Teslemetry with a cloud-only car.
     teslemetry.runtime_data = SimpleNamespace(
