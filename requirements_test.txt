@@ -1,0 +1,4 @@
+pytest-homeassistant-custom-component==0.13.371
+tesla-fleet-api==1.17.3
+mypy
+ruff
