@@ -41,6 +41,7 @@ from homeassistant.helpers import (
 
 from .conftest import ADDRESS, VIN, FakeTeslemetry, setup_integration
 
+WAKE = "button.test_car_wake_bluetooth"
 START_CHARGING = "button.test_car_start_charging_bluetooth"
 STOP_CHARGING = "button.test_car_stop_charging_bluetooth"
 LOCK = "button.test_car_lock_bluetooth"
@@ -50,6 +51,7 @@ CHARGING_AMPS = "number.test_car_charging_amps_bluetooth"
 
 # (entity, platform service, service data, Bluetooth command, command kwargs)
 ENTITY_COMMANDS = [
+    (WAKE, BUTTON_DOMAIN, SERVICE_PRESS, {}, "wake_up", {}),
     (START_CHARGING, BUTTON_DOMAIN, SERVICE_PRESS, {}, "charge_start", {}),
     (STOP_CHARGING, BUTTON_DOMAIN, SERVICE_PRESS, {}, "charge_stop", {}),
     (LOCK, BUTTON_DOMAIN, SERVICE_PRESS, {}, "door_lock", {}),
@@ -105,6 +107,7 @@ async def test_entities(
 
     device_id = _device_id(hass)
     for entity_id, enabled in (
+        (WAKE, True),
         (START_CHARGING, True),
         (STOP_CHARGING, True),
         (CHARGE_LIMIT, True),
@@ -178,6 +181,7 @@ async def test_out_of_range(
         assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
 
     teslemetry.bluetooth.charge_start.assert_not_awaited()
+    teslemetry.bluetooth.wake_up.assert_not_awaited()
     teslemetry.bluetooth.door_unlock.assert_not_awaited()
     teslemetry.assert_cloud_unused()
 
@@ -667,4 +671,20 @@ async def test_teslemetry_not_loaded_keeps_entities(
         BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: START_CHARGING}, blocking=True
     )
     teslemetry.bluetooth.charge_start.assert_awaited_once()
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
+async def test_wake_failure(hass: HomeAssistant, teslemetry: FakeTeslemetry) -> None:
+    """A failed Bluetooth wake raises an error and never reaches the cloud."""
+    await setup_integration(hass)
+    teslemetry.bluetooth.wake_up.side_effect = BluetoothTimeout()
+
+    with pytest.raises(HomeAssistantError) as exc:
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: WAKE}, blocking=True
+        )
+    assert exc.value.translation_key == "bluetooth_failed"
+    teslemetry.bluetooth.wake_up.assert_awaited_once_with()
+    teslemetry.cloud.wake_up.assert_not_called()
     teslemetry.assert_cloud_unused()
