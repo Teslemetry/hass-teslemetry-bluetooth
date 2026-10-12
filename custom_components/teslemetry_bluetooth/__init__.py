@@ -15,14 +15,12 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import (
-    config_validation as cv,
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     COMMANDS,
@@ -35,24 +33,15 @@ from .const import (
     TESLEMETRY_DOMAIN,
     TESLEMETRY_SUBENTRY_TYPE_VEHICLE,
 )
-from .services import async_setup_services
 from .vehicle import TeslemetryBluetoothVehicle
 
 PLATFORMS: Final = [Platform.BUTTON, Platform.NUMBER]
-
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 type TeslemetryBluetoothConfigEntry = ConfigEntry[dict[str, TeslemetryBluetoothVehicle]]
 
 
 class IncompatibleTeslemetry(Exception):
     """Teslemetry does not expose the Bluetooth runtime this integration needs."""
-
-
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the integration."""
-    async_setup_services(hass)
-    return True
 
 
 def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVehicle]:

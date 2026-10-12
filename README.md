@@ -2,7 +2,7 @@
 
 Bluetooth-only command entities for Tesla vehicles in the [Teslemetry](https://www.home-assistant.io/integrations/teslemetry) integration for Home Assistant.
 
-Teslemetry sends each command to a Bluetooth-paired vehicle over Bluetooth first and, if that fails, over the cloud. This companion adds separate entities and an action that **only** use Bluetooth. If the car is not reached over Bluetooth, the command fails with an error. It is never sent to the cloud.
+Teslemetry sends each command to a Bluetooth-paired vehicle over Bluetooth first and, if that fails, over the cloud. This companion adds separate entities that **only** use Bluetooth. If the car is not reached over Bluetooth, the command fails with an error. It is never sent to the cloud.
 
 Your existing Teslemetry entities do not change.
 
@@ -39,27 +39,7 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
 - The entities only send commands. They show no vehicle state: the current charge limit, charging state and lock state stay on the Teslemetry entities. The two numbers always show `unknown`.
 - Charging amps and Charge limit use the car's own maximum from Teslemetry's data, the same value Teslemetry's own numbers use. While Teslemetry has no value, the maximum is 48 A and 100 %. This integration never asks the cloud for the value, so a streaming car sends it only while Teslemetry's own Charging amps entity is enabled.
-- The `send_command` action accepts 0-48 A for every car. The car refuses a value above its own maximum.
 - Lock and Unlock are buttons, not a lock entity, so voice assistants do not ask for a confirmation or code. They are disabled by default; enable them only if you accept that.
-
-## Action: `teslemetry_bluetooth.send_command`
-
-Sends one command to a vehicle over Bluetooth only.
-
-| Field | Description |
-| --- | --- |
-| `device_id` | The Teslemetry vehicle device. |
-| `command` | `charge_start`, `charge_stop`, `set_charge_limit`, `set_charging_amps`, `door_lock` or `door_unlock`. |
-| `arguments` | `{"percent": 80}` for `set_charge_limit`, `{"charging_amps": 16}` for `set_charging_amps`. Other commands take no arguments. |
-
-```yaml
-action: teslemetry_bluetooth.send_command
-data:
-  device_id: 0123456789abcdef0123456789abcdef
-  command: set_charge_limit
-  arguments:
-    percent: 80
-```
 
 ## Errors
 
