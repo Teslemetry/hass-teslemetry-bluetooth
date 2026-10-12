@@ -39,12 +39,22 @@
       "close_sunroof": { "default": "mdi:car-convertible" },
       "open_tonneau": { "default": "mdi:arrow-up-box" },
       "close_tonneau": { "default": "mdi:arrow-down-box" },
-      "stop_tonneau": { "default": "mdi:stop" }
+      "stop_tonneau": { "default": "mdi:stop" },
+      "auto_conditioning_start": { "default": "mdi:fan" },
+      "auto_conditioning_stop": { "default": "mdi:fan-off" },
+      "set_bioweapon_mode_on": { "default": "mdi:biohazard" },
+      "set_bioweapon_mode_off": { "default": "mdi:biohazard" }
     },
     "number": {
       "set_charge_limit": { "default": "mdi:battery-charging-80" },
       "set_charging_amps": { "default": "mdi:current-ac" },
-      "adjust_volume": { "default": "mdi:volume-high" }
+      "adjust_volume": { "default": "mdi:volume-high" },
+      "set_temps": { "default": "mdi:thermometer" }
+    },
+    "select": {
+      "set_climate_keeper_mode": { "default": "mdi:fan" },
+      "set_cabin_overheat_protection": { "default": "mdi:sun-thermometer" },
+      "set_cop_temp": { "default": "mdi:thermometer-high" }
     }
   }
 }

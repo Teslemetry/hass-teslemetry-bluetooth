@@ -27,6 +27,13 @@ CHARGING_AMPS_MAX: Final = 48
 # Tesla's media volume has 31 steps of 1/3, up to 10.333.
 VOLUME_MAX: Final = 31 / 3
 VOLUME_STEP: Final = 1 / 3
+# Teslemetry's cabin temperature range while the car's own range is unknown.
+TEMPERATURE_MIN: Final = 15
+TEMPERATURE_MAX: Final = 28
+
+# The oldest firmware that Teslemetry streams climate data for. Teslemetry
+# offers bioweapon defense only on the climate entity of other vehicles.
+CLIMATE_STREAMING_FIRMWARE: Final = "2024.44.25"
 
 # Every command this integration sends.
 COMMANDS: Final = (
@@ -61,6 +68,13 @@ COMMANDS: Final = (
     "open_tonneau",
     "close_tonneau",
     "stop_tonneau",
+    "auto_conditioning_start",
+    "auto_conditioning_stop",
+    "set_temps",
+    "set_climate_keeper_mode",
+    "set_bioweapon_mode",
+    "set_cabin_overheat_protection",
+    "set_cop_temp",
 )
 
 # Vehicle command results that mean the car is already in the requested state.

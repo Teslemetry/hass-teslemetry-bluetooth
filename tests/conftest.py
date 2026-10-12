@@ -142,6 +142,8 @@ class FakeTeslemetry:
         self.stream = FakeStream()
         # Only the stream is set: the vehicle's listen_* helpers call the cloud.
         self.stream_vehicle = SimpleNamespace(stream=self.stream)
+        # The vehicle config in Teslemetry's metadata.
+        self.config: dict[str, Any] = {"cop_user_set_temp_supported": True}
 
     @staticmethod
     def make_backend(name: str) -> MagicMock:
@@ -163,7 +165,12 @@ class FakeTeslemetry:
             stream_vehicle=self.stream_vehicle,
             device=DeviceInfo(identifiers={("teslemetry", VIN)}, name="Test Car"),
         )
-        return SimpleNamespace(vehicles=[vehicle])
+        metadata_coordinator = SimpleNamespace(
+            data={"vehicles": {VIN: {"config": self.config}}}
+        )
+        return SimpleNamespace(
+            vehicles=[vehicle], metadata_coordinator=metadata_coordinator
+        )
 
     def assert_cloud_unused(self) -> None:
         """Assert no cloud method was ever called."""

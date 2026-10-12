@@ -1,7 +1,10 @@
 """Bluetooth-only command numbers for Teslemetry vehicles."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, override
+
+from tesla_fleet_api import firmware_at_least
 
 from homeassistant.components.number import (
     NumberDeviceClass,
@@ -10,7 +13,13 @@ from homeassistant.components.number import (
     NumberMode,
     RestoreNumber,
 )
-from homeassistant.const import PERCENTAGE, PRECISION_WHOLE, UnitOfElectricCurrent
+from homeassistant.const import (
+    PERCENTAGE,
+    PRECISION_HALVES,
+    PRECISION_WHOLE,
+    UnitOfElectricCurrent,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -19,6 +28,9 @@ from .const import (
     CHARGE_LIMIT_MIN,
     CHARGING_AMPS_MAX,
     CHARGING_AMPS_MIN,
+    CLIMATE_STREAMING_FIRMWARE,
+    TEMPERATURE_MAX,
+    TEMPERATURE_MIN,
     VOLUME_MAX,
     VOLUME_STEP,
 )
@@ -35,19 +47,24 @@ PARALLEL_UPDATES = 0
 class TeslemetryBluetoothNumberEntityDescription(NumberEntityDescription):
     """Describes a number that sends one command over Bluetooth."""
 
-    argument: str
+    # The command arguments that each receive the value.
+    arguments: tuple[str, ...]
+    value_fn: Callable[[float], float] = int
     native_max_value: float
-    # Teslemetry's vehicle_data key for the car's own maximum.
+    # Teslemetry's vehicle_data keys for the car's own minimum and maximum.
+    min_key: str | None = None
     max_key: str
     # Teslemetry's stream field for the same maximum, if the stream has one.
     max_field: str | None = None
+    # The oldest firmware that Teslemetry streams this value for.
+    streaming_firmware: str = "2024.26"
 
 
 # The key of each description is also the Bluetooth command it sends.
 DESCRIPTIONS: tuple[TeslemetryBluetoothNumberEntityDescription, ...] = (
     TeslemetryBluetoothNumberEntityDescription(
         key="set_charge_limit",
-        argument="percent",
+        arguments=("percent",),
         native_min_value=CHARGE_LIMIT_MIN,
         native_max_value=CHARGE_LIMIT_MAX,
         max_key="charge_state_charge_limit_soc_max",
@@ -58,7 +75,7 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothNumberEntityDescription, ...] = (
     ),
     TeslemetryBluetoothNumberEntityDescription(
         key="set_charging_amps",
-        argument="charging_amps",
+        arguments=("charging_amps",),
         native_min_value=CHARGING_AMPS_MIN,
         native_max_value=CHARGING_AMPS_MAX,
         max_key="charge_state_charge_current_request_max",
@@ -67,6 +84,21 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothNumberEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=NumberDeviceClass.CURRENT,
         mode=NumberMode.BOX,
+    ),
+    TeslemetryBluetoothNumberEntityDescription(
+        key="set_temps",
+        arguments=("driver_temp", "passenger_temp"),
+        value_fn=float,
+        native_min_value=TEMPERATURE_MIN,
+        native_max_value=TEMPERATURE_MAX,
+        min_key="climate_state_min_avail_temp",
+        max_key="climate_state_max_avail_temp",
+        streaming_firmware=CLIMATE_STREAMING_FIRMWARE,
+        native_step=PRECISION_HALVES,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=NumberDeviceClass.TEMPERATURE,
+        mode=NumberMode.BOX,
+        entity_registry_enabled_default=False,
     ),
 )
 
@@ -101,8 +133,8 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
     """A number that sends its value over Bluetooth.
 
     It has no state: the current value stays on Teslemetry's own entity.
-    Its maximum follows the car's own, from the same source as Teslemetry's
-    number, and falls back to the fixed maximum while that is unknown.
+    Its range follows the car's own, from the same source as Teslemetry's
+    entity, and falls back to the fixed range while that is unknown.
     """
 
     entity_description: TeslemetryBluetoothNumberEntityDescription
@@ -119,12 +151,15 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
 
     @override
     async def async_added_to_hass(self) -> None:
-        """Follow the car's own maximum."""
+        """Follow the car's own range."""
         await super().async_added_to_hass()
         data = self.vehicle.data
-        # Teslemetry reads a vehicle it does not stream from its coordinator.
-        if not self.vehicle.streaming:
-            self._update_max_from_coordinator()
+        # Teslemetry reads polled vehicles and old firmware from its vehicle
+        # coordinator, and every other vehicle from its stream.
+        if data.poll or not firmware_at_least(
+            data.firmware, self.entity_description.streaming_firmware
+        ):
+            self._update_limits_from_coordinator()
             self.async_on_remove(
                 data.coordinator.async_add_listener(self._handle_coordinator_update)
             )
@@ -147,24 +182,32 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
             )
         )
 
-    def _update_max_from_coordinator(self) -> None:
-        """Read the maximum from Teslemetry's vehicle coordinator data."""
-        value = self.vehicle.data.coordinator.data.get(self.entity_description.max_key)
-        self._set_max(value if isinstance(value, (int, float)) else None)
-
-    def _set_max(self, value: float | None) -> None:
-        """Use the car's maximum, or the fixed one when it is unknown or invalid."""
+    def _update_limits_from_coordinator(self) -> None:
+        """Read the range from Teslemetry's vehicle coordinator data."""
+        data = self.vehicle.data.coordinator.data
         description = self.entity_description
-        self._attr_native_max_value = (
-            value
-            if value is not None and value >= (description.native_min_value or 0)
-            else description.native_max_value
+        self._set_limits(
+            _number(data.get(description.min_key)) if description.min_key else None,
+            _number(data.get(description.max_key)),
         )
+
+    def _set_limits(self, minimum: float | None, maximum: float | None) -> None:
+        """Use the car's range, or the fixed one when it is unknown or invalid."""
+        description = self.entity_description
+        fixed_minimum = description.native_min_value or 0
+        if minimum is None:
+            minimum = fixed_minimum
+        if maximum is None or maximum < minimum:
+            maximum = description.native_max_value
+        if maximum < minimum:
+            minimum = fixed_minimum
+        self._attr_native_min_value = minimum
+        self._attr_native_max_value = maximum
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Update the maximum from Teslemetry's vehicle coordinator."""
-        self._update_max_from_coordinator()
+        """Update the range from Teslemetry's vehicle coordinator."""
+        self._update_limits_from_coordinator()
         self.async_write_ha_state()
 
     @callback
@@ -173,17 +216,18 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
         value = event["data"][self.entity_description.max_field]
         # Some vehicles stream integers as strings.
         try:
-            self._set_max(int(value))
+            self._set_limits(None, int(value))
         except TypeError, ValueError:
-            self._set_max(None)
+            self._set_limits(None, None)
         self.async_write_ha_state()
 
     @override
     async def async_set_native_value(self, value: float) -> None:
         """Send the value."""
+        description = self.entity_description
         await self.vehicle.async_send(
-            self.entity_description.key,
-            **{self.entity_description.argument: int(value)},
+            description.key,
+            **dict.fromkeys(description.arguments, description.value_fn(value)),
         )
 
 
@@ -208,3 +252,8 @@ class TeslemetryBluetoothVolumeEntity(TeslemetryBluetoothEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Send the volume, keeping its fraction of a step."""
         await self.vehicle.async_send(self.entity_description.key, volume=value)
+
+
+def _number(value: Any) -> float | None:
+    """Return a number from Teslemetry's data, or None if it is not one."""
+    return value if isinstance(value, (int, float)) else None

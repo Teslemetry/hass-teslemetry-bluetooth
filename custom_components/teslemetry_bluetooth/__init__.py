@@ -35,7 +35,7 @@ from .const import (
 )
 from .vehicle import TeslemetryBluetoothVehicle
 
-PLATFORMS: Final = [Platform.BUTTON, Platform.NUMBER]
+PLATFORMS: Final = [Platform.BUTTON, Platform.NUMBER, Platform.SELECT]
 
 type TeslemetryBluetoothConfigEntry = ConfigEntry[dict[str, TeslemetryBluetoothVehicle]]
 
@@ -71,6 +71,9 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
             for attr in ("poll", "firmware", "coordinator", "stream_vehicle"):
                 if not hasattr(vehicle_data, attr):
                     raise IncompatibleTeslemetry(f"vehicle.{attr}")
+            # Teslemetry reads the vehicle config of streaming vehicles from here.
+            if (metadata := getattr(runtime, "metadata_coordinator", None)) is None:
+                raise IncompatibleTeslemetry("runtime_data.metadata_coordinator")
             device = device_registry.async_get_device_by_identifier(
                 (TESLEMETRY_DOMAIN, vehicle_data.vin), teslemetry_entry.entry_id
             )
@@ -90,8 +93,14 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
                     vehicle_data.vin,
                 )
                 continue
+            config = (
+                (metadata.data or {})
+                .get("vehicles", {})
+                .get(vehicle_data.vin, {})
+                .get("config", {})
+            )
             vehicles[vehicle_data.vin] = TeslemetryBluetoothVehicle(
-                api, vehicle_data.vin, device, vehicle_data
+                api, vehicle_data.vin, device, vehicle_data, config
             )
     return vehicles
 
