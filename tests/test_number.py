@@ -60,6 +60,9 @@ async def test_streaming_max(hass: HomeAssistant, teslemetry: FakeTeslemetry) ->
 
     teslemetry.stream.send({"ChargeCurrentRequestMax": None})
     assert _limits(hass, CHARGING_AMPS) == (0, 48)
+    teslemetry.stream.send({"ChargeCurrentRequestMax": 32})
+    teslemetry.stream.send({"ChargeCurrentRequestMax": "bad"})
+    assert _limits(hass, CHARGING_AMPS) == (0, 48)
     # The stream has no charge limit maximum, so Teslemetry's coordinator is unused.
     teslemetry.coordinator.async_set_updated_data(
         {"charge_state_charge_limit_soc_max": 90}

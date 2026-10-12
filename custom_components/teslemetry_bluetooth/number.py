@@ -154,9 +154,10 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
         """Update the maximum from Teslemetry's stream."""
         value = event["data"][self.entity_description.max_field]
         # Some vehicles stream integers as strings.
-        self._attr_native_max_value = (
-            self.entity_description.native_max_value if value is None else int(value)
-        )
+        try:
+            self._attr_native_max_value = int(value)
+        except TypeError, ValueError:
+            self._attr_native_max_value = self.entity_description.native_max_value
         self.async_write_ha_state()
 
     @override
