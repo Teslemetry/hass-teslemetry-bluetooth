@@ -28,11 +28,17 @@ class TeslemetryBluetoothVehicle:
     """
 
     def __init__(
-        self, router: VehicleRouter[Any, Any], vin: str, device: DeviceEntry
+        self,
+        router: VehicleRouter[Any, Any],
+        vin: str,
+        device: DeviceEntry,
+        data: Any,
     ) -> None:
         """Initialize the vehicle."""
         self.router = router
         self.vin = vin
+        # Teslemetry's TeslemetryVehicleData, read only for the car's own limits.
+        self.data = data
         # Teslemetry's own device for the vehicle; entities attach to it.
         self.device = device
         self.name = device.name_by_user or device.name or vin

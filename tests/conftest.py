@@ -1,7 +1,8 @@
 """Fixtures for Teslemetry Bluetooth Commands tests."""
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -34,6 +35,46 @@ def auto_enable_custom_integrations(
     yield
 
 
+class FakeCoordinator:
+    """A stand-in for Teslemetry's vehicle data coordinator."""
+
+    def __init__(self) -> None:
+        """Initialize with no vehicle data."""
+        self.data: dict[str, Any] = {}
+        self.listeners: list[Callable[[], None]] = []
+
+    def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
+        """Add a listener."""
+        self.listeners.append(listener)
+        return lambda: self.listeners.remove(listener)
+
+    def async_set_updated_data(self, data: dict[str, Any]) -> None:
+        """Replace the data and notify listeners."""
+        self.data = data
+        for listener in list(self.listeners):
+            listener()
+
+
+class FakeStreamVehicle:
+    """A stand-in for Teslemetry's TeslemetryStreamVehicle."""
+
+    def __init__(self) -> None:
+        """Initialize with no listeners."""
+        self.current_request_max: list[Callable[[int | None], None]] = []
+
+    def listen_ChargeCurrentRequestMax(
+        self, listener: Callable[[int | None], None]
+    ) -> Callable[[], None]:
+        """Add a ChargeCurrentRequestMax listener."""
+        self.current_request_max.append(listener)
+        return lambda: self.current_request_max.remove(listener)
+
+    def send_current_request_max(self, value: int | None) -> None:
+        """Stream a ChargeCurrentRequestMax value."""
+        for listener in list(self.current_request_max):
+            listener(value)
+
+
 class FakeTeslemetry:
     """A Teslemetry stand-in whose runtime data matches core 2026.10.0."""
 
@@ -45,6 +86,11 @@ class FakeTeslemetry:
         # Any call on the cloud backend is recorded in cloud.mock_calls.
         self.cloud = self.make_backend("cloud")
         self.runtime_data: SimpleNamespace | None = None
+        # Teslemetry streams this vehicle unless poll is set or firmware is old.
+        self.poll = False
+        self.firmware = "2026.20.1"
+        self.coordinator = FakeCoordinator()
+        self.stream_vehicle = FakeStreamVehicle()
 
     @staticmethod
     def make_backend(name: str) -> MagicMock:
@@ -60,6 +106,10 @@ class FakeTeslemetry:
         vehicle = SimpleNamespace(
             api=router,
             vin=VIN,
+            poll=self.poll,
+            firmware=self.firmware,
+            coordinator=self.coordinator,
+            stream_vehicle=self.stream_vehicle,
             device=DeviceInfo(identifiers={("teslemetry", VIN)}, name="Test Car"),
         )
         return SimpleNamespace(vehicles=[vehicle])

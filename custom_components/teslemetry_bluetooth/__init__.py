@@ -98,7 +98,7 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
                 )
                 continue
             vehicles[vehicle_data.vin] = TeslemetryBluetoothVehicle(
-                api, vehicle_data.vin, device
+                api, vehicle_data.vin, device, vehicle_data
             )
     return vehicles
 
