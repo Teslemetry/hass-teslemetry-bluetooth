@@ -29,7 +29,7 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -39,7 +39,7 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 
-from .conftest import VIN, FakeTeslemetry, setup_integration
+from .conftest import ADDRESS, VIN, FakeTeslemetry, setup_integration
 
 START_CHARGING = "button.test_car_start_charging_bluetooth"
 STOP_CHARGING = "button.test_car_stop_charging_bluetooth"
@@ -514,3 +514,220 @@ async def test_vehicle_in_two_teslemetry_entries(
 
     assert entity_registry.async_get(START_CHARGING) is not None
     assert entity_registry.async_get(f"{START_CHARGING}_2") is None
+
+
+def _entity_ids(hass: HomeAssistant, config_entry: MockConfigEntry) -> set[str]:
+    """Return the registered entity ids of this integration."""
+    return {
+        entry.entity_id
+        for entry in er.async_entries_for_config_entry(
+            er.async_get(hass), config_entry.entry_id
+        )
+    }
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_unpaired_vehicle_entities_removed(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A vehicle that loses its Bluetooth pairing loses its entities."""
+    await setup_integration(hass)
+    assert len(_entity_ids(hass, config_entry)) == len(ENTITY_COMMANDS)
+
+    # Removing the Bluetooth subentry reloads Teslemetry with a cloud-only car.
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[SimpleNamespace(api=teslemetry.cloud, vin=VIN, device={})]
+    )
+    (subentry_id,) = teslemetry_entry.subentries
+    assert hass.config_entries.async_remove_subentry(teslemetry_entry, subentry_id)
+    assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert _entity_ids(hass, config_entry) == set()
+    assert hass.states.get(START_CHARGING) is None
+    teslemetry.assert_cloud_unused()
+
+
+async def test_bluetooth_key_not_loaded_keeps_entities(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A paired car Teslemetry falls back to the cloud for keeps its entities."""
+    await setup_integration(hass)
+    entity_ids = _entity_ids(hass, config_entry)
+
+    # Teslemetry could not load the Bluetooth key, so the car is cloud only.
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[SimpleNamespace(api=teslemetry.cloud, vin=VIN, device={})]
+    )
+    assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+    assert _entity_ids(hass, config_entry) == entity_ids
+    assert hass.states.get(START_CHARGING).state == STATE_UNAVAILABLE
+
+    # The key loads again on the next reload.
+    teslemetry.runtime_data = None
+    assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get(START_CHARGING).state != STATE_UNAVAILABLE
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures("teslemetry_entry")
+async def test_shared_vehicle_paired_in_other_entry_keeps_entities(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A shared car keeps its entities while another account still pairs it."""
+    MockConfigEntry(
+        domain="teslemetry",
+        subentries_data=[
+            ConfigSubentryData(
+                data={"vin": VIN, "address": ADDRESS},
+                subentry_type="vehicle",
+                title="Test Car",
+                unique_id=VIN,
+            )
+        ],
+    ).add_to_hass(hass)
+    await setup_integration(hass)
+    entity_ids = _entity_ids(hass, config_entry)
+
+    entity = er.async_get(hass).async_get(START_CHARGING)
+    assert entity is not None and entity.device_id is not None
+    device = dr.async_get(hass).async_get(entity.device_id)
+    assert device is not None
+    first = hass.config_entries.async_get_known_entry(device.config_entry_id)
+    (second,) = (
+        entry
+        for entry in hass.config_entries.async_entries("teslemetry")
+        if entry is not first
+    )
+
+    # The other account could not load its key, then the account that owns
+    # the car's device loses the pairing.
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[SimpleNamespace(api=teslemetry.cloud, vin=VIN, device={})]
+    )
+    assert await hass.config_entries.async_reload(second.entry_id)
+    (subentry_id,) = first.subentries
+    assert hass.config_entries.async_remove_subentry(first, subentry_id)
+    assert await hass.config_entries.async_reload(first.entry_id)
+    await hass.async_block_till_done()
+
+    assert _entity_ids(hass, config_entry) == entity_ids
+    teslemetry.assert_cloud_unused()
+
+
+async def test_shared_vehicle_owner_entry_removed_keeps_entities(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Removing one account of a shared car keeps the entities the other pairs."""
+    second = MockConfigEntry(
+        domain="teslemetry",
+        subentries_data=[
+            ConfigSubentryData(
+                data={"vin": VIN, "address": ADDRESS},
+                subentry_type="vehicle",
+                title="Test Car",
+                unique_id=VIN,
+            )
+        ],
+    )
+    second.add_to_hass(hass)
+    await setup_integration(hass)
+    entity_ids = _entity_ids(hass, config_entry)
+    entity = er.async_get(hass).async_get(START_CHARGING)
+    assert entity is not None and entity.device_id is not None
+    device = dr.async_get(hass).async_get(entity.device_id)
+    assert device is not None
+    assert device.config_entry_id == teslemetry_entry.entry_id
+
+    # The other account could not load its key, then the owner is removed.
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[SimpleNamespace(api=teslemetry.cloud, vin=VIN, device={})]
+    )
+    assert await hass.config_entries.async_reload(second.entry_id)
+    assert await hass.config_entries.async_remove(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert _entity_ids(hass, config_entry) == entity_ids
+    teslemetry.assert_cloud_unused()
+
+
+async def test_vehicle_leaves_account(
+    hass: HomeAssistant,
+    device_registry: dr.DeviceRegistry,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A vehicle Teslemetry no longer has leaves no orphaned entities."""
+    await setup_integration(hass)
+
+    # Teslemetry removes the device of a vehicle that left the account.
+    teslemetry.runtime_data = SimpleNamespace(vehicles=[])
+    teslemetry.create_device = False
+    device_registry.async_remove_device(_device_id(hass))
+    assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert _entity_ids(hass, config_entry) == set()
+
+
+async def test_teslemetry_entry_removed(
+    hass: HomeAssistant,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Removing the Teslemetry entry removes the entities on its vehicles."""
+    await setup_integration(hass)
+    assert _entity_ids(hass, config_entry)
+
+    assert await hass.config_entries.async_remove(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert _entity_ids(hass, config_entry) == set()
+    assert hass.states.get(START_CHARGING) is None
+
+
+async def test_teslemetry_not_loaded_keeps_entities(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Entities and their settings survive while Teslemetry is not loaded."""
+    await setup_integration(hass)
+    entity_registry.async_update_entity(START_CHARGING, name="Charge now")
+    entity_ids = _entity_ids(hass, config_entry)
+
+    assert await hass.config_entries.async_unload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert _entity_ids(hass, config_entry) == entity_ids
+    assert hass.states.get(START_CHARGING).state == STATE_UNAVAILABLE
+
+    assert await hass.config_entries.async_setup(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+    assert _entity_ids(hass, config_entry) == entity_ids
+    assert entity_registry.async_get(START_CHARGING).name == "Charge now"
+    assert hass.states.get(START_CHARGING).state != STATE_UNAVAILABLE
+    await hass.services.async_call(
+        BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: START_CHARGING}, blocking=True
+    )
+    teslemetry.bluetooth.charge_start.assert_awaited_once()
+    teslemetry.assert_cloud_unused()

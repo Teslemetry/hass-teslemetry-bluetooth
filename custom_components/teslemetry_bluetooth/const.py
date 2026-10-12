@@ -11,8 +11,9 @@ TESLEMETRY_DOMAIN: Final = "teslemetry"
 
 LOGGER = logging.getLogger(__package__)
 
-# Teslemetry Bluetooth subentry type, used only to tell the user nothing is paired.
+# Teslemetry's Bluetooth pairing subentry type and its VIN key.
 TESLEMETRY_SUBENTRY_TYPE_VEHICLE: Final = "vehicle"
+TESLEMETRY_CONF_VIN: Final = "vin"
 
 # The oldest Teslemetry that exposes the Bluetooth runtime this integration reuses.
 MIN_TESLEMETRY_VERSION: Final = "Home Assistant 2026.10.0"
