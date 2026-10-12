@@ -221,8 +221,10 @@ async def test_buttons_follow_teslemetry_entities(
     teslemetry.entities = (("button", "honk"),)
     await setup_integration(hass)
 
+    assert hass.states.get(HONK_HORN) is not None
     for entity_id in FOLLOWING_BUTTONS:
-        assert (hass.states.get(entity_id) is not None) is (entity_id == HONK_HORN)
+        if entity_id != HONK_HORN:
+            assert hass.states.get(entity_id) is None, entity_id
     assert hass.states.get(WAKE) is not None
     teslemetry.assert_cloud_unused()
 
@@ -369,27 +371,38 @@ async def test_command_refused(
         if entity_id in FOLLOWING_BUTTONS
     ],
 )
+@pytest.mark.parametrize(
+    ("mock_attr", "value", "translation_key"),
+    [
+        pytest.param(
+            "side_effect", BluetoothTimeout(), "bluetooth_failed", id="failure"
+        ),
+        pytest.param(
+            "return_value",
+            {"response": {"result": False, "reason": "not_available"}},
+            "command_failed",
+            id="refused",
+        ),
+    ],
+)
 async def test_following_button_errors(
-    hass: HomeAssistant, teslemetry: FakeTeslemetry, entity_id: str, command: str
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    entity_id: str,
+    command: str,
+    mock_attr: str,
+    value: object,
+    translation_key: str,
 ) -> None:
     """A failed or refused press raises an error and never reaches the cloud."""
     await setup_integration(hass)
-    mock = getattr(teslemetry.bluetooth, command)
+    setattr(getattr(teslemetry.bluetooth, command), mock_attr, value)
 
-    mock.side_effect = BluetoothTimeout()
     with pytest.raises(HomeAssistantError) as exc:
         await hass.services.async_call(
             BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
-    assert exc.value.translation_key == "bluetooth_failed"
-
-    mock.side_effect = None
-    mock.return_value = {"response": {"result": False, "reason": "not_available"}}
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(
-            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
-        )
-    assert exc.value.translation_key == "command_failed"
+    assert exc.value.translation_key == translation_key
     teslemetry.assert_cloud_unused()
 
 
