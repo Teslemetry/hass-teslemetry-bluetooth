@@ -39,7 +39,24 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 
-from .conftest import ADDRESS, VIN, FakeTeslemetry, setup_integration
+from .conftest import (
+    ADDRESS,
+    CLOSE_CHARGE_PORT,
+    CLOSE_SUNROOF,
+    CLOSE_TONNEAU,
+    CLOSE_WINDOWS,
+    COVER_BUTTONS,
+    OPEN_CHARGE_PORT,
+    OPEN_FRUNK,
+    OPEN_TONNEAU,
+    STOP_TONNEAU,
+    TOGGLE_TRUNK,
+    VENT_SUNROOF,
+    VENT_WINDOWS,
+    VIN,
+    FakeTeslemetry,
+    setup_integration,
+)
 from .test_button import SWITCH_BUTTONS
 
 WAKE = "button.test_car_wake_bluetooth"
@@ -96,6 +113,10 @@ ENTITY_COMMANDS = [
         {},
         "schedule_software_update",
         {"offset_sec": 0},
+    ),
+    *(
+        (entity_id, BUTTON_DOMAIN, SERVICE_PRESS, {}, command, kwargs)
+        for entity_id, command, kwargs in COVER_BUTTONS
     ),
     (
         CHARGE_LIMIT,
@@ -171,6 +192,17 @@ async def test_entities(
         (PREVIOUS_TRACK, False),
         (VOLUME, False),
         *((entity_id, False) for entity_id in FOLLOWING_BUTTONS),
+        (VENT_WINDOWS, False),
+        (CLOSE_WINDOWS, False),
+        (OPEN_FRUNK, False),
+        (TOGGLE_TRUNK, False),
+        (OPEN_CHARGE_PORT, False),
+        (CLOSE_CHARGE_PORT, False),
+        (VENT_SUNROOF, False),
+        (CLOSE_SUNROOF, False),
+        (OPEN_TONNEAU, False),
+        (CLOSE_TONNEAU, False),
+        (STOP_TONNEAU, False),
     ):
         entry = entity_registry.async_get(entity_id)
         assert entry is not None, entity_id

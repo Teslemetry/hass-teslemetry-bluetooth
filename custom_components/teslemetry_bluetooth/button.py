@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, override
 
-from tesla_fleet_api.const import AutoSeat
+from tesla_fleet_api.const import AutoSeat, SunRoofCommand, Trunk, WindowCommand
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.components.button.const import ButtonDeviceClass
@@ -70,6 +70,65 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothButtonEntityDescription, ...] = (
     ),
     TeslemetryBluetoothButtonEntityDescription(
         key="door_unlock", entity_registry_enabled_default=False
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="vent_windows",
+        command="window_control",
+        arguments={"command": WindowCommand.VENT},
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="close_windows",
+        command="window_control",
+        arguments={"command": WindowCommand.CLOSE},
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="open_frunk",
+        command="actuate_trunk",
+        arguments={"which_trunk": Trunk.FRONT},
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="toggle_trunk",
+        command="actuate_trunk",
+        arguments={"which_trunk": Trunk.REAR},
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="charge_port_door_open", entity_registry_enabled_default=False
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="charge_port_door_close", entity_registry_enabled_default=False
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="vent_sunroof",
+        command="sun_roof_control",
+        arguments={"state": SunRoofCommand.VENT},
+        teslemetry_entity=(Platform.COVER, "vehicle_state_sun_roof_state"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="close_sunroof",
+        command="sun_roof_control",
+        arguments={"state": SunRoofCommand.CLOSE},
+        teslemetry_entity=(Platform.COVER, "vehicle_state_sun_roof_state"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="open_tonneau",
+        teslemetry_entity=(Platform.COVER, "tonneau"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="close_tonneau",
+        teslemetry_entity=(Platform.COVER, "tonneau"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="stop_tonneau",
+        teslemetry_entity=(Platform.COVER, "tonneau"),
+        entity_registry_enabled_default=False,
     ),
     TeslemetryBluetoothButtonEntityDescription(
         key="media_toggle_playback", entity_registry_enabled_default=False

@@ -28,7 +28,18 @@
       "remote_boombox": { "default": "mdi:volume-high" },
       "trigger_homelink": { "default": "mdi:garage" },
       "remote_start_drive": { "default": "mdi:car-key" },
-      "schedule_software_update": { "default": "mdi:update" }
+      "schedule_software_update": { "default": "mdi:update" },
+      "vent_windows": { "default": "mdi:window-open-variant" },
+      "close_windows": { "default": "mdi:window-closed-variant" },
+      "open_frunk": { "default": "mdi:car" },
+      "toggle_trunk": { "default": "mdi:car-back" },
+      "charge_port_door_open": { "default": "mdi:ev-plug-ccs2" },
+      "charge_port_door_close": { "default": "mdi:ev-plug-ccs2" },
+      "vent_sunroof": { "default": "mdi:car-convertible" },
+      "close_sunroof": { "default": "mdi:car-convertible" },
+      "open_tonneau": { "default": "mdi:arrow-up-box" },
+      "close_tonneau": { "default": "mdi:arrow-down-box" },
+      "stop_tonneau": { "default": "mdi:stop" }
     },
     "number": {
       "set_charge_limit": { "default": "mdi:battery-charging-80" },

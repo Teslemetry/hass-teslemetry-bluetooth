@@ -74,7 +74,7 @@ class TeslemetryBluetoothVehicle:
                 listener()
         return in_range
 
-    async def async_send(self, command: str, **kwargs: Any) -> None:
+    async def async_send(self, command: str, /, **kwargs: Any) -> None:
         """Send a command over Bluetooth only, raising if the car is not reached."""
         if not await self.async_update_range():
             raise HomeAssistantError(

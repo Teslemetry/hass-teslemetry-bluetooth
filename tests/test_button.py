@@ -15,10 +15,23 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .conftest import FakeTeslemetry, setup_integration
+from .conftest import (
+    CLOSE_SUNROOF,
+    CLOSE_TONNEAU,
+    COVER_BUTTONS,
+    OPEN_TONNEAU,
+    STOP_TONNEAU,
+    VENT_SUNROOF,
+    VENT_WINDOWS,
+    VIN,
+    FakeTeslemetry,
+    setup_integration,
+)
 
 GUEST_MODE_ON = "button.test_car_guest_mode_on_bluetooth"
 GUEST_MODE_OFF = "button.test_car_guest_mode_off_bluetooth"
+SUNROOF_BUTTONS = (VENT_SUNROOF, CLOSE_SUNROOF)
+TONNEAU_BUTTONS = (OPEN_TONNEAU, CLOSE_TONNEAU, STOP_TONNEAU)
 
 # (button, Bluetooth command, command kwargs) for each switch's On and Off.
 SWITCH_BUTTONS = [
@@ -219,4 +232,91 @@ async def test_guest_mode_removed_when_polled(
         assert entity_registry.async_get(entity_id) is None
         assert hass.states.get(entity_id) is None
     assert hass.states.get(_entity_id("sentry_mode_on")) is not None
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
+@pytest.mark.parametrize(
+    ("cover_keys", "added", "missing"),
+    [
+        pytest.param(
+            ["vehicle_state_sun_roof_state"],
+            SUNROOF_BUTTONS,
+            TONNEAU_BUTTONS,
+            id="sunroof",
+        ),
+        pytest.param(["tonneau"], TONNEAU_BUTTONS, SUNROOF_BUTTONS, id="tonneau"),
+        pytest.param([], (), SUNROOF_BUTTONS + TONNEAU_BUTTONS, id="neither"),
+    ],
+)
+async def test_feature_buttons_follow_teslemetry_covers(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    teslemetry: FakeTeslemetry,
+    cover_keys: list[str],
+    added: tuple[str, ...],
+    missing: tuple[str, ...],
+) -> None:
+    """The sunroof and tonneau buttons exist only if Teslemetry has the cover."""
+    teslemetry.entities = tuple(("cover", key) for key in cover_keys)
+    await setup_integration(hass)
+
+    for entity_id in added:
+        assert entity_registry.async_get(entity_id) is not None, entity_id
+    for entity_id in missing:
+        assert entity_registry.async_get(entity_id) is None, entity_id
+    # The buttons every vehicle has do not depend on a cover.
+    assert entity_registry.async_get(VENT_WINDOWS) is not None
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures(
+    "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
+)
+@pytest.mark.parametrize(
+    ("entity_id", "command"),
+    [(entity_id, command) for entity_id, command, _ in COVER_BUTTONS],
+)
+async def test_cover_button_refused(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    entity_id: str,
+    command: str,
+) -> None:
+    """A refused cover command raises an error and never reaches the cloud."""
+    await setup_integration(hass)
+    getattr(teslemetry.bluetooth, command).return_value = {
+        "response": {"result": False, "reason": "GENERICERROR_CLOSURES_OPEN"}
+    }
+
+    with pytest.raises(HomeAssistantError) as exc:
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
+        )
+    assert exc.value.translation_key == "command_failed"
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures("config_entry")
+async def test_feature_buttons_removed_with_cover(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+) -> None:
+    """The tonneau buttons go when Teslemetry's Tonneau cover is removed."""
+    await setup_integration(hass)
+    assert entity_registry.async_get(OPEN_TONNEAU) is not None
+
+    # Teslemetry no longer has the cover; this integration reloads with it.
+    cover = entity_registry.async_get_entity_id("cover", "teslemetry", f"{VIN}-tonneau")
+    assert cover is not None
+    entity_registry.async_remove(cover)
+    teslemetry.entities = (("cover", "vehicle_state_sun_roof_state"),)
+    assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+
+    for entity_id in TONNEAU_BUTTONS:
+        assert entity_registry.async_get(entity_id) is None
+    assert entity_registry.async_get(VENT_SUNROOF) is not None
     teslemetry.assert_cloud_unused()
