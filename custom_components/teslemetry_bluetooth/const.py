@@ -27,6 +27,7 @@ CHARGING_AMPS_MAX: Final = 48
 
 # Every command this integration sends.
 COMMANDS: Final = (
+    "wake_up",
     "charge_start",
     "charge_stop",
     "door_lock",
@@ -34,10 +35,6 @@ COMMANDS: Final = (
     "set_charge_limit",
     "set_charging_amps",
 )
-
-# Bluetooth commands only the entities send. The send_command action does not
-# accept them.
-ENTITY_COMMANDS: Final = ("wake_up",)
 
 # Vehicle command results that mean the car is already in the requested state.
 ACCEPTED_REASONS: Final = ("already_set", "not_charging", "requested")

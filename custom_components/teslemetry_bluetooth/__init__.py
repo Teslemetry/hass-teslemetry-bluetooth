@@ -25,7 +25,6 @@ from homeassistant.helpers.event import async_track_time_interval
 from .const import (
     COMMANDS,
     DOMAIN,
-    ENTITY_COMMANDS,
     ISSUE_INCOMPATIBLE_TESLEMETRY,
     LOGGER,
     MIN_TESLEMETRY_VERSION,
@@ -65,7 +64,7 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
             if not callable(getattr(api, "is_healthy", None)):
                 raise IncompatibleTeslemetry("VehicleRouter.is_healthy")
             primary = api.primary
-            for command in (*COMMANDS, *ENTITY_COMMANDS):
+            for command in COMMANDS:
                 if not callable(getattr(primary, command, None)):
                     raise IncompatibleTeslemetry(f"Bluetooth vehicle.{command}")
             # The numbers read the car's own maximums from these.

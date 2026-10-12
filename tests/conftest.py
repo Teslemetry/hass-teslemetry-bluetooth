@@ -15,11 +15,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 from tesla_fleet_api.router import VehicleRouter
 
-from custom_components.teslemetry_bluetooth.const import (
-    COMMANDS,
-    DOMAIN,
-    ENTITY_COMMANDS,
-)
+from custom_components.teslemetry_bluetooth.const import COMMANDS, DOMAIN
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -109,7 +105,7 @@ class FakeTeslemetry:
     def make_backend(name: str) -> MagicMock:
         """Return a vehicle backend whose commands all succeed."""
         backend = MagicMock(name=name)
-        for command in (*COMMANDS, *ENTITY_COMMANDS):
+        for command in COMMANDS:
             setattr(backend, command, AsyncMock(return_value=SUCCESS))
         return backend
 
