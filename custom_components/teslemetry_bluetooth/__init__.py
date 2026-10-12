@@ -103,11 +103,12 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
     return vehicles
 
 
-def _paired_over_bluetooth(teslemetry_entry: ConfigEntry, vin: str) -> bool:
-    """Return if a Teslemetry entry still has a Bluetooth pairing for a vehicle."""
+def _paired_over_bluetooth(hass: HomeAssistant, vin: str) -> bool:
+    """Return if any Teslemetry entry still has a Bluetooth pairing for a vehicle."""
     return any(
         subentry.subentry_type == TESLEMETRY_SUBENTRY_TYPE_VEHICLE
         and subentry.data.get(TESLEMETRY_CONF_VIN) == vin
+        for teslemetry_entry in hass.config_entries.async_entries(TESLEMETRY_DOMAIN)
         for subentry in teslemetry_entry.subentries.values()
     )
 
@@ -138,7 +139,7 @@ def _async_remove_stale_entities(
         # settings once Teslemetry has the Bluetooth backend again.
         if teslemetry_entry is not None and (
             teslemetry_entry.state is not ConfigEntryState.LOADED
-            or _paired_over_bluetooth(teslemetry_entry, vin)
+            or _paired_over_bluetooth(hass, vin)
         ):
             continue
         LOGGER.debug("Removing stale entity %s", entity.entity_id)

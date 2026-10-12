@@ -29,7 +29,7 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -576,6 +576,53 @@ async def test_bluetooth_key_not_loaded_keeps_entities(
     assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get(START_CHARGING).state != STATE_UNAVAILABLE
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures("teslemetry_entry")
+async def test_shared_vehicle_paired_in_other_entry_keeps_entities(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A shared car keeps its entities while another account still pairs it."""
+    MockConfigEntry(
+        domain="teslemetry",
+        subentries_data=[
+            ConfigSubentryData(
+                data={"vin": VIN},
+                subentry_type="vehicle",
+                title="Test Car",
+                unique_id=VIN,
+            )
+        ],
+    ).add_to_hass(hass)
+    await setup_integration(hass)
+    entity_ids = _entity_ids(hass, config_entry)
+
+    entity = er.async_get(hass).async_get(START_CHARGING)
+    assert entity is not None and entity.device_id is not None
+    device = dr.async_get(hass).async_get(entity.device_id)
+    assert device is not None
+    first = hass.config_entries.async_get_known_entry(device.config_entry_id)
+    (second,) = (
+        entry
+        for entry in hass.config_entries.async_entries("teslemetry")
+        if entry is not first
+    )
+
+    # The other account could not load its key, then the account that owns
+    # the car's device loses the pairing.
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[SimpleNamespace(api=teslemetry.cloud, vin=VIN, device={})]
+    )
+    assert await hass.config_entries.async_reload(second.entry_id)
+    (subentry_id,) = first.subentries
+    assert hass.config_entries.async_remove_subentry(first, subentry_id)
+    assert await hass.config_entries.async_reload(first.entry_id)
+    await hass.async_block_till_done()
+
+    assert _entity_ids(hass, config_entry) == entity_ids
     teslemetry.assert_cloud_unused()
 
 
