@@ -305,6 +305,11 @@ async def test_target_temperature_polling(
     # Unknown again: back to the fixed range.
     teslemetry.coordinator.async_set_updated_data({})
     assert _limits(hass, TARGET_TEMPERATURE) == (15, 28)
+    # A boolean is not a temperature.
+    teslemetry.coordinator.async_set_updated_data(
+        {"climate_state_min_avail_temp": True, "climate_state_max_avail_temp": False}
+    )
+    assert _limits(hass, TARGET_TEMPERATURE) == (15, 28)
     # A maximum below the minimum is not a usable range.
     teslemetry.coordinator.async_set_updated_data(
         {"climate_state_min_avail_temp": 20, "climate_state_max_avail_temp": 18}

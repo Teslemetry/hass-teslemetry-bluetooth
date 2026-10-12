@@ -256,4 +256,7 @@ class TeslemetryBluetoothVolumeEntity(TeslemetryBluetoothEntity, NumberEntity):
 
 def _number(value: Any) -> float | None:
     """Return a number from Teslemetry's data, or None if it is not one."""
-    return value if isinstance(value, (int, float)) else None
+    # bool is an int, but never a range limit.
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value
