@@ -13,8 +13,9 @@ from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import ACCEPTED_REASONS, DOMAIN, LOGGER
 
-# Failures a Bluetooth command can raise. TeslaFleetError is a BaseException.
-BLUETOOTH_ERRORS = (TeslaFleetError, BleakError, TimeoutError, OSError)
+# Failures a Bluetooth command can raise. TeslaFleetError is a BaseException,
+# and the library raises ValueError when the session key is missing.
+BLUETOOTH_ERRORS = (TeslaFleetError, BleakError, OSError, ValueError)
 
 
 class TeslemetryBluetoothVehicle:
@@ -75,7 +76,9 @@ class TeslemetryBluetoothVehicle:
                 translation_key="bluetooth_failed",
                 translation_placeholders={
                     "vehicle": self.name,
-                    "error": str(err) or type(err).__name__,
+                    "error": err.message
+                    if isinstance(err, TeslaFleetError)
+                    else str(err) or type(err).__name__,
                 },
             ) from err
         LOGGER.debug("Bluetooth command %s result: %s", command, result)
@@ -83,8 +86,8 @@ class TeslemetryBluetoothVehicle:
         if not isinstance(response, dict):
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
-                translation_key="command_failed",
-                translation_placeholders={"vehicle": self.name, "reason": str(result)},
+                translation_key="command_no_response",
+                translation_placeholders={"vehicle": self.name},
             )
         if response.get("result") is True:
             return

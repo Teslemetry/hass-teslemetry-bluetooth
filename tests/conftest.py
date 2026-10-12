@@ -2,7 +2,6 @@
 
 from collections.abc import Generator
 from types import SimpleNamespace
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -16,7 +15,7 @@ from pytest_homeassistant_custom_component.common import (
 from tesla_fleet_api.router import VehicleRouter
 
 from custom_components.teslemetry_bluetooth.const import COMMANDS, DOMAIN
-from homeassistant.config_entries import ConfigFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -41,10 +40,11 @@ class FakeTeslemetry:
     def __init__(self) -> None:
         """Initialize the backends."""
         self.in_range = True
+        self.create_device = True
         self.bluetooth = self.make_backend("bluetooth")
         # Any call on the cloud backend is recorded in cloud.mock_calls.
         self.cloud = self.make_backend("cloud")
-        self.runtime_data: Any = None
+        self.runtime_data: SimpleNamespace | None = None
 
     @staticmethod
     def make_backend(name: str) -> MagicMock:
@@ -54,7 +54,7 @@ class FakeTeslemetry:
             setattr(backend, command, AsyncMock(return_value=SUCCESS))
         return backend
 
-    def build_runtime_data(self) -> Any:
+    def build_runtime_data(self) -> SimpleNamespace:
         """Build runtime data shaped like Teslemetry's TeslemetryData."""
         router = VehicleRouter(self.bluetooth, self.cloud, health=lambda: self.in_range)
         vehicle = SimpleNamespace(
@@ -85,20 +85,21 @@ def teslemetry(hass: HomeAssistant) -> Generator[FakeTeslemetry]:
     """Replace the Teslemetry integration with a stand-in."""
     fake = FakeTeslemetry()
 
-    async def async_setup_entry(hass: HomeAssistant, entry: Any) -> bool:
+    async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.runtime_data = (
             fake.runtime_data
             if fake.runtime_data is not None
             else fake.build_runtime_data()
         )
-        dr.async_get(hass).async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={("teslemetry", VIN)},
-            name="Test Car",
-        )
+        if fake.create_device:
+            dr.async_get(hass).async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={("teslemetry", VIN)},
+                name="Test Car",
+            )
         return True
 
-    async def async_unload_entry(hass: HomeAssistant, entry: Any) -> bool:
+    async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
 
     mock_integration(

@@ -13,6 +13,8 @@ Your existing Teslemetry entities do not change.
 
 This integration does not pair a vehicle, create a key or open a Bluetooth connection of its own. It reuses Teslemetry's key, pairing and Bluetooth connection.
 
+The Teslemetry integration must be loaded. If Teslemetry cannot start (for example, the Teslemetry cloud is not reachable when Home Assistant starts), this integration adds no entities until Teslemetry loads.
+
 ## Installation
 
 1. Add this repository to HACS as a custom repository (category: Integration), or copy `custom_components/teslemetry_bluetooth` into your `config/custom_components` folder.
@@ -35,7 +37,9 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 | Unlock (Bluetooth) | Button | No |
 
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
-- The entities only send commands. They show no vehicle state: the current charge limit, charging state and lock state stay on the Teslemetry entities.
+- The entities only send commands. They show no vehicle state: the current charge limit, charging state and lock state stay on the Teslemetry entities. The two numbers always show `unknown`.
+- Charging amps accepts 0-48 A for every car. The car refuses a value above its own maximum.
+- Lock and Unlock are buttons, not a lock entity, so voice assistants do not ask for a confirmation or code. They are disabled by default; enable them only if you accept that.
 
 ## Action: `teslemetry_bluetooth.send_command`
 

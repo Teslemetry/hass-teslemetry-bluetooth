@@ -1,7 +1,6 @@
 """Tests for Teslemetry Bluetooth Commands."""
 
 from types import SimpleNamespace
-from typing import Any
 from unittest.mock import MagicMock
 
 from bleak.exc import BleakError
@@ -17,6 +16,7 @@ from tesla_fleet_api.exceptions import (
     BluetoothTransportError,
     BluetoothUnconfirmedCommand,
 )
+from tesla_fleet_api.router import VehicleRouter
 
 from custom_components.teslemetry_bluetooth.const import (
     DOMAIN,
@@ -79,6 +79,7 @@ FAILURES = [
     pytest.param(BluetoothCommandFailed(), id="failed"),
     pytest.param(TimeoutError(), id="asyncio_timeout"),
     pytest.param(BleakError("disconnected"), id="bleak_error"),
+    pytest.param(ValueError("Session shared key is missing"), id="no_session"),
 ]
 
 
@@ -136,9 +137,9 @@ async def test_entity_command_in_range(
     entity_id: str,
     domain: str,
     service: str,
-    data: dict[str, Any],
+    data: dict[str, int],
     command: str,
-    kwargs: dict[str, Any],
+    kwargs: dict[str, int],
 ) -> None:
     """In range, each entity sends its command over Bluetooth only."""
     await setup_integration(hass)
@@ -242,39 +243,50 @@ async def test_bluetooth_failure(
 
 
 @pytest.mark.usefixtures("teslemetry_entry", "config_entry")
+@pytest.mark.parametrize("reason", ["already_set", "not_charging", "requested"])
+async def test_command_already_done(
+    hass: HomeAssistant, teslemetry: FakeTeslemetry, reason: str
+) -> None:
+    """A car already in the requested state is a success."""
+    await setup_integration(hass)
+    teslemetry.bluetooth.charge_stop.return_value = {
+        "response": {"result": False, "reason": reason}
+    }
+
+    await hass.services.async_call(
+        BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: STOP_CHARGING}, blocking=True
+    )
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
 @pytest.mark.parametrize(
-    ("result", "raises"),
+    ("result", "translation_key"),
     [
-        ({"response": {"result": False, "reason": "already_set"}}, False),
-        ({"response": {"result": False, "reason": "not_charging"}}, False),
-        ({"response": {"result": False, "reason": "cable_disconnected"}}, True),
-        ({"response": {"result": False}}, True),
-        ({}, True),
+        pytest.param(
+            {"response": {"result": False, "reason": "cable_disconnected"}},
+            "command_failed",
+            id="reason",
+        ),
+        pytest.param({"response": {"result": False}}, "command_failed", id="no_reason"),
+        pytest.param({}, "command_no_response", id="no_response"),
     ],
 )
-async def test_command_result(
+async def test_command_refused(
     hass: HomeAssistant,
     teslemetry: FakeTeslemetry,
-    result: dict[str, Any],
-    raises: bool,
+    result: dict[str, dict[str, bool | str]],
+    translation_key: str,
 ) -> None:
     """A refused command raises an error and never reaches the cloud."""
     await setup_integration(hass)
     teslemetry.bluetooth.charge_stop.return_value = result
 
-    if raises:
-        with pytest.raises(HomeAssistantError) as exc:
-            await hass.services.async_call(
-                BUTTON_DOMAIN,
-                SERVICE_PRESS,
-                {ATTR_ENTITY_ID: STOP_CHARGING},
-                blocking=True,
-            )
-        assert exc.value.translation_key == "command_failed"
-    else:
+    with pytest.raises(HomeAssistantError) as exc:
         await hass.services.async_call(
             BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: STOP_CHARGING}, blocking=True
         )
+    assert exc.value.translation_key == translation_key
     teslemetry.assert_cloud_unused()
 
 
@@ -367,7 +379,7 @@ async def test_incompatible_teslemetry(
     entity_registry: er.EntityRegistry,
     teslemetry: FakeTeslemetry,
     config_entry: MockConfigEntry,
-    runtime_data: Any,
+    runtime_data: SimpleNamespace,
 ) -> None:
     """Missing Teslemetry internals raise a repair and load no entities."""
     teslemetry.runtime_data = runtime_data
@@ -396,6 +408,45 @@ async def test_incompatible_bluetooth_backend(
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
     assert issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
+
+
+@pytest.mark.usefixtures("teslemetry_entry")
+async def test_incompatible_router(
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+    teslemetry: FakeTeslemetry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A VehicleRouter without the in-range check raises the repair."""
+
+    class OldRouter(VehicleRouter[MagicMock, MagicMock]):
+        is_healthy = None  # type: ignore[assignment]
+
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[
+            SimpleNamespace(
+                api=OldRouter(teslemetry.bluetooth, teslemetry.cloud), vin=VIN
+            )
+        ]
+    )
+    await setup_integration(hass)
+
+    assert config_entry.state is ConfigEntryState.SETUP_ERROR
+    assert issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
+
+
+@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
+async def test_vehicle_without_device(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    teslemetry: FakeTeslemetry,
+) -> None:
+    """A vehicle Teslemetry has no device for gets no entities."""
+    teslemetry.create_device = False
+    await setup_integration(hass)
+
+    assert entity_registry.async_get(START_CHARGING) is None
+    teslemetry.assert_cloud_unused()
 
 
 @pytest.mark.usefixtures("config_entry")
@@ -451,3 +502,15 @@ async def test_unload(
     assert config_entry.state is ConfigEntryState.NOT_LOADED
     assert await hass.config_entries.async_remove(config_entry.entry_id)
     assert not issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
+
+
+@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
+async def test_vehicle_in_two_teslemetry_entries(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> None:
+    """A car shared by two Teslemetry accounts gets one set of entities."""
+    MockConfigEntry(domain="teslemetry").add_to_hass(hass)
+    await setup_integration(hass)
+
+    assert entity_registry.async_get(START_CHARGING) is not None
+    assert entity_registry.async_get(f"{START_CHARGING}_2") is None

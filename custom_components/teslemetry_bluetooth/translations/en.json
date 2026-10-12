@@ -12,14 +12,26 @@
   },
   "entity": {
     "button": {
-      "charge_start": { "name": "Start charging (Bluetooth)" },
-      "charge_stop": { "name": "Stop charging (Bluetooth)" },
-      "door_lock": { "name": "Lock (Bluetooth)" },
-      "door_unlock": { "name": "Unlock (Bluetooth)" }
+      "charge_start": {
+        "name": "Start charging (Bluetooth)"
+      },
+      "charge_stop": {
+        "name": "Stop charging (Bluetooth)"
+      },
+      "door_lock": {
+        "name": "Lock (Bluetooth)"
+      },
+      "door_unlock": {
+        "name": "Unlock (Bluetooth)"
+      }
     },
     "number": {
-      "set_charge_limit": { "name": "Charge limit (Bluetooth)" },
-      "set_charging_amps": { "name": "Charging amps (Bluetooth)" }
+      "set_charge_limit": {
+        "name": "Charge limit (Bluetooth)"
+      },
+      "set_charging_amps": {
+        "name": "Charging amps (Bluetooth)"
+      }
     }
   },
   "exceptions": {
@@ -28,6 +40,9 @@
     },
     "command_failed": {
       "message": "{vehicle} refused the Bluetooth command: {reason}."
+    },
+    "command_no_response": {
+      "message": "{vehicle} did not return a result for the Bluetooth command. Check the vehicle's state in Teslemetry before you try again."
     },
     "incompatible_teslemetry": {
       "message": "The installed Teslemetry integration does not provide the Bluetooth connection this integration needs (missing: {missing}). Install Teslemetry from {version} or later."
@@ -68,7 +83,7 @@
       "description": "Sends a command to a Teslemetry vehicle over Bluetooth only. If the vehicle is not reached over Bluetooth, the action fails and the command is not sent to the cloud.",
       "fields": {
         "arguments": {
-          "description": "Arguments for the command, for example {\"percent\": 80} for set charge limit or {\"charging_amps\": 16} for set charging amps.",
+          "description": "Arguments for the command: percent for set charge limit, charging_amps for set charging amps. Other commands take none.",
           "name": "Arguments"
         },
         "command": {

@@ -78,8 +78,19 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
                 (TESLEMETRY_DOMAIN, vehicle_data.vin), teslemetry_entry.entry_id
             )
             if device is None:
+                # Teslemetry registers the device when it adds the vehicle's
+                # entities, so it is missing only if that failed.
                 LOGGER.warning(
                     "Teslemetry has no device for vehicle %s", vehicle_data.vin
+                )
+                continue
+            if vehicle_data.vin in vehicles:
+                # Two Teslemetry accounts can share a car; one set of entities
+                # is enough because both use the same Bluetooth key.
+                LOGGER.warning(
+                    "Vehicle %s is in more than one Teslemetry entry; "
+                    "adding Bluetooth commands to the first one only",
+                    vehicle_data.vin,
                 )
                 continue
             vehicles[vehicle_data.vin] = TeslemetryBluetoothVehicle(
