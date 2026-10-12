@@ -13,6 +13,7 @@ from pytest_homeassistant_custom_component.common import (
     mock_integration,
     mock_platform,
 )
+from tesla_fleet_api.const import SunRoofCommand, Trunk, WindowCommand
 from tesla_fleet_api.router import VehicleRouter
 
 from custom_components.teslemetry_bluetooth.const import COMMANDS, DOMAIN
@@ -34,7 +35,36 @@ TESLEMETRY_ENTITIES = (
     ("button", "homelink"),
     ("button", "enable_keyless_driving"),
     ("update", "vehicle_state_software_update_status"),
+    ("cover", "vehicle_state_sun_roof_state"),
+    ("cover", "tonneau"),
 )
+
+VENT_WINDOWS = "button.test_car_vent_windows_bluetooth"
+CLOSE_WINDOWS = "button.test_car_close_windows_bluetooth"
+OPEN_FRUNK = "button.test_car_open_frunk_bluetooth"
+TOGGLE_TRUNK = "button.test_car_open_close_trunk_bluetooth"
+OPEN_CHARGE_PORT = "button.test_car_open_charge_port_door_bluetooth"
+CLOSE_CHARGE_PORT = "button.test_car_close_charge_port_door_bluetooth"
+VENT_SUNROOF = "button.test_car_vent_sunroof_bluetooth"
+CLOSE_SUNROOF = "button.test_car_close_sunroof_bluetooth"
+OPEN_TONNEAU = "button.test_car_open_tonneau_bluetooth"
+CLOSE_TONNEAU = "button.test_car_close_tonneau_bluetooth"
+STOP_TONNEAU = "button.test_car_stop_tonneau_bluetooth"
+
+# (entity, Bluetooth command, command kwargs) for each cover button
+COVER_BUTTONS: list[tuple[str, str, dict[str, Any]]] = [
+    (VENT_WINDOWS, "window_control", {"command": WindowCommand.VENT}),
+    (CLOSE_WINDOWS, "window_control", {"command": WindowCommand.CLOSE}),
+    (OPEN_FRUNK, "actuate_trunk", {"which_trunk": Trunk.FRONT}),
+    (TOGGLE_TRUNK, "actuate_trunk", {"which_trunk": Trunk.REAR}),
+    (OPEN_CHARGE_PORT, "charge_port_door_open", {}),
+    (CLOSE_CHARGE_PORT, "charge_port_door_close", {}),
+    (VENT_SUNROOF, "sun_roof_control", {"state": SunRoofCommand.VENT}),
+    (CLOSE_SUNROOF, "sun_roof_control", {"state": SunRoofCommand.CLOSE}),
+    (OPEN_TONNEAU, "open_tonneau", {}),
+    (CLOSE_TONNEAU, "close_tonneau", {}),
+    (STOP_TONNEAU, "stop_tonneau", {}),
+]
 
 
 @pytest.fixture(autouse=True)
@@ -171,7 +201,14 @@ def teslemetry(hass: HomeAssistant) -> Generator[FakeTeslemetry]:
         entity_registry = er.async_get(hass)
         for platform, key in fake.entities:
             entity_registry.async_get_or_create(
-                platform, "teslemetry", f"{VIN}-{key}", config_entry=entry
+                platform,
+                "teslemetry",
+                f"{VIN}-{key}",
+                config_entry=entry,
+                # Teslemetry's sunroof cover is disabled by default.
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION
+                if key == "vehicle_state_sun_roof_state"
+                else None,
             )
         return True
 

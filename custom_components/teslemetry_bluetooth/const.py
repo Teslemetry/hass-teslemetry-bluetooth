@@ -53,6 +53,14 @@ COMMANDS: Final = (
     "trigger_homelink",
     "remote_start_drive",
     "schedule_software_update",
+    "window_control",
+    "actuate_trunk",
+    "charge_port_door_open",
+    "charge_port_door_close",
+    "sun_roof_control",
+    "open_tonneau",
+    "close_tonneau",
+    "stop_tonneau",
 )
 
 # Vehicle command results that mean the car is already in the requested state.

@@ -60,6 +60,17 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 | Homelink (Bluetooth) | Button | No |
 | Keyless driving (Bluetooth) | Button | No |
 | Install update (Bluetooth) | Button | No |
+| Vent windows (Bluetooth) | Button | No |
+| Close windows (Bluetooth) | Button | No |
+| Open frunk (Bluetooth) | Button | No |
+| Open/close trunk (Bluetooth) | Button | No |
+| Open charge port door (Bluetooth) | Button | No |
+| Close charge port door (Bluetooth) | Button | No |
+| Vent sunroof (Bluetooth) | Button | No |
+| Close sunroof (Bluetooth) | Button | No |
+| Open tonneau (Bluetooth) | Button | No |
+| Close tonneau (Bluetooth) | Button | No |
+| Stop tonneau (Bluetooth) | Button | No |
 
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
 - The entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state and switch states stay on the Teslemetry entities. The numbers always show `unknown`.
@@ -68,6 +79,9 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 - Flash lights, Honk horn, Play fart, Homelink, Keyless driving and Install update are added only where Teslemetry added its own entity for the same command. They are disabled by default.
 - Homelink sends the Home Assistant home location, as Teslemetry does.
 - Install update starts a software update that the car has already downloaded. If no update is waiting, the car refuses the command.
+- The cover buttons send one command each and show no state: the windows, frunk, trunk, charge port door, sunroof and tonneau state stay on the Teslemetry covers. Open/close trunk opens the trunk if it is closed and closes it if it is open, as the car does.
+- Vent sunroof and Close sunroof are added only if Teslemetry has a Sunroof cover for the car. The sunroof has no Stop button, because the car does not accept that command over Bluetooth.
+- Open tonneau, Close tonneau and Stop tonneau are added only if Teslemetry has a Tonneau cover for the car (Cybertruck).
 - Lock and Unlock are buttons, not a lock entity, so voice assistants do not ask for a confirmation or code. They are disabled by default; enable them only if you accept that.
 - Play/pause toggles playback: it plays if the car is paused and pauses if the car is playing. Volume uses the car's own scale from 0 to 10.33, the same scale Teslemetry uses: Teslemetry's media player volume of 100 % is 10.33. The current playback and volume stay on Teslemetry's media player.
 - Each of Teslemetry's command switches (Sentry mode, Valet mode, Auto seat climate left and right, Auto steering wheel heater, Defrost and Guest mode) has an On and an Off button, because a switch would need the car's state. The buttons are disabled by default. Valet mode on sends an empty PIN, as Teslemetry's switch does. Guest mode buttons are added only to vehicles that Teslemetry streams, as Teslemetry's own Guest mode switch is.

@@ -95,6 +95,39 @@
       },
       "schedule_software_update": {
         "name": "Install update (Bluetooth)"
+      },
+      "vent_windows": {
+        "name": "Vent windows (Bluetooth)"
+      },
+      "close_windows": {
+        "name": "Close windows (Bluetooth)"
+      },
+      "open_frunk": {
+        "name": "Open frunk (Bluetooth)"
+      },
+      "toggle_trunk": {
+        "name": "Open/close trunk (Bluetooth)"
+      },
+      "charge_port_door_open": {
+        "name": "Open charge port door (Bluetooth)"
+      },
+      "charge_port_door_close": {
+        "name": "Close charge port door (Bluetooth)"
+      },
+      "vent_sunroof": {
+        "name": "Vent sunroof (Bluetooth)"
+      },
+      "close_sunroof": {
+        "name": "Close sunroof (Bluetooth)"
+      },
+      "open_tonneau": {
+        "name": "Open tonneau (Bluetooth)"
+      },
+      "close_tonneau": {
+        "name": "Close tonneau (Bluetooth)"
+      },
+      "stop_tonneau": {
+        "name": "Stop tonneau (Bluetooth)"
       }
     },
     "number": {
