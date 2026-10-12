@@ -12,6 +12,9 @@
   },
   "entity": {
     "button": {
+      "wake_up": {
+        "name": "Wake (Bluetooth)"
+      },
       "charge_start": {
         "name": "Start charging (Bluetooth)"
       },

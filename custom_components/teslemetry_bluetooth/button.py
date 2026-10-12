@@ -16,6 +16,7 @@ PARALLEL_UPDATES = 0
 
 # The key of each description is also the Bluetooth command it sends.
 DESCRIPTIONS: tuple[ButtonEntityDescription, ...] = (
+    ButtonEntityDescription(key="wake_up"),
     ButtonEntityDescription(key="charge_start"),
     ButtonEntityDescription(key="charge_stop"),
     ButtonEntityDescription(key="door_lock", entity_registry_enabled_default=False),

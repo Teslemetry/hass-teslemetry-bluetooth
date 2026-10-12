@@ -27,6 +27,7 @@ CHARGING_AMPS_MAX: Final = 48
 
 # Every command this integration sends.
 COMMANDS: Final = (
+    "wake_up",
     "charge_start",
     "charge_stop",
     "door_lock",

@@ -1,6 +1,7 @@
 {
   "entity": {
     "button": {
+      "wake_up": { "default": "mdi:sleep-off" },
       "charge_start": { "default": "mdi:play" },
       "charge_stop": { "default": "mdi:stop" },
       "door_lock": { "default": "mdi:car-door-lock" },
