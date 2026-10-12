@@ -39,7 +39,7 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 
-from .conftest import VIN, FakeTeslemetry, setup_integration
+from .conftest import ADDRESS, VIN, FakeTeslemetry, setup_integration
 
 START_CHARGING = "button.test_car_start_charging_bluetooth"
 STOP_CHARGING = "button.test_car_stop_charging_bluetooth"
@@ -590,7 +590,7 @@ async def test_shared_vehicle_paired_in_other_entry_keeps_entities(
         domain="teslemetry",
         subentries_data=[
             ConfigSubentryData(
-                data={"vin": VIN},
+                data={"vin": VIN, "address": ADDRESS},
                 subentry_type="vehicle",
                 title="Test Car",
                 unique_id=VIN,
@@ -620,6 +620,45 @@ async def test_shared_vehicle_paired_in_other_entry_keeps_entities(
     (subentry_id,) = first.subentries
     assert hass.config_entries.async_remove_subentry(first, subentry_id)
     assert await hass.config_entries.async_reload(first.entry_id)
+    await hass.async_block_till_done()
+
+    assert _entity_ids(hass, config_entry) == entity_ids
+    teslemetry.assert_cloud_unused()
+
+
+async def test_shared_vehicle_owner_entry_removed_keeps_entities(
+    hass: HomeAssistant,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Removing one account of a shared car keeps the entities the other pairs."""
+    second = MockConfigEntry(
+        domain="teslemetry",
+        subentries_data=[
+            ConfigSubentryData(
+                data={"vin": VIN, "address": ADDRESS},
+                subentry_type="vehicle",
+                title="Test Car",
+                unique_id=VIN,
+            )
+        ],
+    )
+    second.add_to_hass(hass)
+    await setup_integration(hass)
+    entity_ids = _entity_ids(hass, config_entry)
+    entity = er.async_get(hass).async_get(START_CHARGING)
+    assert entity is not None and entity.device_id is not None
+    device = dr.async_get(hass).async_get(entity.device_id)
+    assert device is not None
+    assert device.config_entry_id == teslemetry_entry.entry_id
+
+    # The other account could not load its key, then the owner is removed.
+    teslemetry.runtime_data = SimpleNamespace(
+        vehicles=[SimpleNamespace(api=teslemetry.cloud, vin=VIN, device={})]
+    )
+    assert await hass.config_entries.async_reload(second.entry_id)
+    assert await hass.config_entries.async_remove(teslemetry_entry.entry_id)
     await hass.async_block_till_done()
 
     assert _entity_ids(hass, config_entry) == entity_ids

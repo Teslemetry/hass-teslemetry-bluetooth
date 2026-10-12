@@ -104,10 +104,15 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
 
 
 def _paired_over_bluetooth(hass: HomeAssistant, vin: str) -> bool:
-    """Return if any Teslemetry entry still has a Bluetooth pairing for a vehicle."""
+    """Return if a Teslemetry entry still has the vehicle and its Bluetooth pairing."""
+    device_registry = dr.async_get(hass)
     return any(
         subentry.subentry_type == TESLEMETRY_SUBENTRY_TYPE_VEHICLE
         and subentry.data.get(TESLEMETRY_CONF_VIN) == vin
+        and device_registry.async_get_device_by_identifier(
+            (TESLEMETRY_DOMAIN, vin), teslemetry_entry.entry_id
+        )
+        is not None
         for teslemetry_entry in hass.config_entries.async_entries(TESLEMETRY_DOMAIN)
         for subentry in teslemetry_entry.subentries.values()
     )
@@ -134,13 +139,14 @@ def _async_remove_stale_entities(
             if device is not None and device.config_entry_id is not None
             else None
         )
-        # Keep the entities while Teslemetry is not loaded or still has the
-        # pairing but could not load the key, so they come back with their
-        # settings once Teslemetry has the Bluetooth backend again.
-        if teslemetry_entry is not None and (
-            teslemetry_entry.state is not ConfigEntryState.LOADED
-            or _paired_over_bluetooth(hass, vin)
-        ):
+        # Keep the entities while their Teslemetry entry is not loaded, or while
+        # a Teslemetry entry still has the car paired but could not load the
+        # key, so they come back with their settings once Teslemetry has the
+        # Bluetooth backend again.
+        if (
+            teslemetry_entry is not None
+            and teslemetry_entry.state is not ConfigEntryState.LOADED
+        ) or _paired_over_bluetooth(hass, vin):
             continue
         LOGGER.debug("Removing stale entity %s", entity.entity_id)
         entity_registry.async_remove(entity.entity_id)
