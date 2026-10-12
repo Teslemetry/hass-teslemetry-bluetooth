@@ -21,6 +21,15 @@ DESCRIPTIONS: tuple[ButtonEntityDescription, ...] = (
     ButtonEntityDescription(key="charge_stop"),
     ButtonEntityDescription(key="door_lock", entity_registry_enabled_default=False),
     ButtonEntityDescription(key="door_unlock", entity_registry_enabled_default=False),
+    ButtonEntityDescription(
+        key="media_toggle_playback", entity_registry_enabled_default=False
+    ),
+    ButtonEntityDescription(
+        key="media_next_track", entity_registry_enabled_default=False
+    ),
+    ButtonEntityDescription(
+        key="media_prev_track", entity_registry_enabled_default=False
+    ),
 )
 
 

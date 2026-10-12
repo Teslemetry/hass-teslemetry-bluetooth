@@ -26,6 +26,15 @@
       },
       "door_unlock": {
         "name": "Unlock (Bluetooth)"
+      },
+      "media_toggle_playback": {
+        "name": "Play/pause (Bluetooth)"
+      },
+      "media_next_track": {
+        "name": "Next track (Bluetooth)"
+      },
+      "media_prev_track": {
+        "name": "Previous track (Bluetooth)"
       }
     },
     "number": {
@@ -34,6 +43,9 @@
       },
       "set_charging_amps": {
         "name": "Charging amps (Bluetooth)"
+      },
+      "adjust_volume": {
+        "name": "Volume (Bluetooth)"
       }
     }
   },

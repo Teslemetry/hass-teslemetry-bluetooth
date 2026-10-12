@@ -7,6 +7,7 @@ from tesla_fleet_api import firmware_at_least
 
 from homeassistant.components.number import (
     NumberDeviceClass,
+    NumberEntity,
     NumberEntityDescription,
     NumberMode,
     RestoreNumber,
@@ -20,6 +21,8 @@ from .const import (
     CHARGE_LIMIT_MIN,
     CHARGING_AMPS_MAX,
     CHARGING_AMPS_MIN,
+    VOLUME_MAX,
+    VOLUME_STEP,
 )
 from .entity import TeslemetryBluetoothEntity
 from .vehicle import TeslemetryBluetoothVehicle
@@ -69,6 +72,16 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothNumberEntityDescription, ...] = (
     ),
 )
 
+# The key is also the Bluetooth command it sends.
+VOLUME_DESCRIPTION = NumberEntityDescription(
+    key="adjust_volume",
+    native_min_value=0,
+    native_max_value=VOLUME_MAX,
+    native_step=VOLUME_STEP,
+    mode=NumberMode.SLIDER,
+    entity_registry_enabled_default=False,
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -80,6 +93,10 @@ async def async_setup_entry(
         TeslemetryBluetoothNumberEntity(vehicle, description)
         for vehicle in entry.runtime_data.values()
         for description in DESCRIPTIONS
+    )
+    async_add_entities(
+        TeslemetryBluetoothVolumeEntity(vehicle, VOLUME_DESCRIPTION)
+        for vehicle in entry.runtime_data.values()
     )
 
 
@@ -172,3 +189,26 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
             self.entity_description.key,
             **{self.entity_description.argument: int(value)},
         )
+
+
+class TeslemetryBluetoothVolumeEntity(TeslemetryBluetoothEntity, NumberEntity):
+    """A number that sets the media volume over Bluetooth.
+
+    It has no state: the current volume stays on Teslemetry's media player.
+    """
+
+    _attr_native_value = None
+
+    def __init__(
+        self,
+        vehicle: TeslemetryBluetoothVehicle,
+        description: NumberEntityDescription,
+    ) -> None:
+        """Initialize the number."""
+        super().__init__(vehicle, description.key)
+        self.entity_description = description
+
+    @override
+    async def async_set_native_value(self, value: float) -> None:
+        """Send the volume, keeping its fraction of a step."""
+        await self.vehicle.async_send(self.entity_description.key, volume=value)

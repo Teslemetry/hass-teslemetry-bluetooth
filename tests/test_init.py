@@ -48,6 +48,10 @@ LOCK = "button.test_car_lock_bluetooth"
 UNLOCK = "button.test_car_unlock_bluetooth"
 CHARGE_LIMIT = "number.test_car_charge_limit_bluetooth"
 CHARGING_AMPS = "number.test_car_charging_amps_bluetooth"
+PLAY_PAUSE = "button.test_car_play_pause_bluetooth"
+NEXT_TRACK = "button.test_car_next_track_bluetooth"
+PREVIOUS_TRACK = "button.test_car_previous_track_bluetooth"
+VOLUME = "number.test_car_volume_bluetooth"
 
 # (entity, platform service, service data, Bluetooth command, command kwargs)
 ENTITY_COMMANDS = [
@@ -71,6 +75,17 @@ ENTITY_COMMANDS = [
         {ATTR_VALUE: 16},
         "set_charging_amps",
         {"charging_amps": 16},
+    ),
+    (PLAY_PAUSE, BUTTON_DOMAIN, SERVICE_PRESS, {}, "media_toggle_playback", {}),
+    (NEXT_TRACK, BUTTON_DOMAIN, SERVICE_PRESS, {}, "media_next_track", {}),
+    (PREVIOUS_TRACK, BUTTON_DOMAIN, SERVICE_PRESS, {}, "media_prev_track", {}),
+    (
+        VOLUME,
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_VALUE: 5.0},
+        "adjust_volume",
+        {"volume": 5.0},
     ),
 ]
 
@@ -102,7 +117,7 @@ async def test_entities(
     entity_registry: er.EntityRegistry,
     teslemetry: FakeTeslemetry,
 ) -> None:
-    """Charging entities are enabled, lock entities are disabled, all on the car."""
+    """Charging entities are enabled, the others are disabled, all on the car."""
     await setup_integration(hass)
 
     device_id = _device_id(hass)
@@ -114,6 +129,10 @@ async def test_entities(
         (CHARGING_AMPS, True),
         (LOCK, False),
         (UNLOCK, False),
+        (PLAY_PAUSE, False),
+        (NEXT_TRACK, False),
+        (PREVIOUS_TRACK, False),
+        (VOLUME, False),
     ):
         entry = entity_registry.async_get(entity_id)
         assert entry is not None, entity_id
@@ -140,9 +159,9 @@ async def test_entity_command_in_range(
     entity_id: str,
     domain: str,
     service: str,
-    data: dict[str, int],
+    data: dict[str, float],
     command: str,
-    kwargs: dict[str, int],
+    kwargs: dict[str, float],
 ) -> None:
     """In range, each entity sends its command over Bluetooth only."""
     await setup_integration(hass)

@@ -24,6 +24,9 @@ CHARGE_LIMIT_MIN: Final = 50
 CHARGE_LIMIT_MAX: Final = 100
 CHARGING_AMPS_MIN: Final = 0
 CHARGING_AMPS_MAX: Final = 48
+# Tesla's media volume has 31 steps of 1/3, up to 10.333.
+VOLUME_MAX: Final = 31 / 3
+VOLUME_STEP: Final = 1 / 3
 
 # Every command this integration sends.
 COMMANDS: Final = (
@@ -34,6 +37,10 @@ COMMANDS: Final = (
     "door_unlock",
     "set_charge_limit",
     "set_charging_amps",
+    "media_toggle_playback",
+    "media_next_track",
+    "media_prev_track",
+    "adjust_volume",
 )
 
 # Vehicle command results that mean the car is already in the requested state.
