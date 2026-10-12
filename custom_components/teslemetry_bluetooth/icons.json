@@ -22,7 +22,13 @@
       "climate_state_defrost_mode_on": { "default": "mdi:snowflake-melt" },
       "climate_state_defrost_mode_off": { "default": "mdi:snowflake-melt" },
       "guest_mode_enabled_on": { "default": "mdi:account-group" },
-      "guest_mode_enabled_off": { "default": "mdi:account-group" }
+      "guest_mode_enabled_off": { "default": "mdi:account-group" },
+      "flash_lights": { "default": "mdi:flashlight" },
+      "honk_horn": { "default": "mdi:bullhorn" },
+      "remote_boombox": { "default": "mdi:volume-high" },
+      "trigger_homelink": { "default": "mdi:garage" },
+      "remote_start_drive": { "default": "mdi:car-key" },
+      "schedule_software_update": { "default": "mdi:update" }
     },
     "number": {
       "set_charge_limit": { "default": "mdi:battery-charging-80" },

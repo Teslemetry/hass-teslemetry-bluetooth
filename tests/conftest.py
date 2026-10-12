@@ -18,13 +18,23 @@ from tesla_fleet_api.router import VehicleRouter
 from custom_components.teslemetry_bluetooth.const import COMMANDS, DOMAIN
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigSubentryData
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.setup import async_setup_component
 
 VIN = "LRWYGCEK1PC000001"
 ADDRESS = "AA:BB:CC:DD:EE:FF"
 SUCCESS = {"response": {"result": True, "reason": ""}}
+
+# Teslemetry's own entities that some Bluetooth buttons follow, as (platform, key).
+TESLEMETRY_ENTITIES = (
+    ("button", "flash_lights"),
+    ("button", "honk"),
+    ("button", "boombox"),
+    ("button", "homelink"),
+    ("button", "enable_keyless_driving"),
+    ("update", "vehicle_state_software_update_status"),
+)
 
 
 @pytest.fixture(autouse=True)
@@ -89,6 +99,8 @@ class FakeTeslemetry:
         """Initialize the backends."""
         self.in_range = True
         self.create_device = True
+        # The entities Teslemetry registers for the vehicle.
+        self.entities: tuple[tuple[str, str], ...] = TESLEMETRY_ENTITIES
         self.bluetooth = self.make_backend("bluetooth")
         # Any call on the cloud backend is recorded in cloud.mock_calls.
         self.cloud = self.make_backend("cloud")
@@ -155,6 +167,11 @@ def teslemetry(hass: HomeAssistant) -> Generator[FakeTeslemetry]:
                 config_entry_id=entry.entry_id,
                 identifiers={("teslemetry", VIN)},
                 name="Test Car",
+            )
+        entity_registry = er.async_get(hass)
+        for platform, key in fake.entities:
+            entity_registry.async_get_or_create(
+                platform, "teslemetry", f"{VIN}-{key}", config_entry=entry
             )
         return True
 

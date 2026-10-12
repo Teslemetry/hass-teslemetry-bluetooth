@@ -77,6 +77,24 @@
       },
       "guest_mode_enabled_off": {
         "name": "Guest mode off (Bluetooth)"
+      },
+      "flash_lights": {
+        "name": "Flash lights (Bluetooth)"
+      },
+      "honk_horn": {
+        "name": "Honk horn (Bluetooth)"
+      },
+      "remote_boombox": {
+        "name": "Play fart (Bluetooth)"
+      },
+      "trigger_homelink": {
+        "name": "Homelink (Bluetooth)"
+      },
+      "remote_start_drive": {
+        "name": "Keyless driving (Bluetooth)"
+      },
+      "schedule_software_update": {
+        "name": "Install update (Bluetooth)"
       }
     },
     "number": {

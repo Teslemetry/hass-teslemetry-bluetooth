@@ -47,6 +47,12 @@ COMMANDS: Final = (
     "remote_auto_steering_wheel_heat_climate_request",
     "set_preconditioning_max",
     "guest_mode",
+    "flash_lights",
+    "honk_horn",
+    "remote_boombox",
+    "trigger_homelink",
+    "remote_start_drive",
+    "schedule_software_update",
 )
 
 # Vehicle command results that mean the car is already in the requested state.

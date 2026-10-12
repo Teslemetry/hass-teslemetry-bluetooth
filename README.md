@@ -54,11 +54,20 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 | Defrost off (Bluetooth) | Button | No |
 | Guest mode on (Bluetooth) | Button | No |
 | Guest mode off (Bluetooth) | Button | No |
+| Flash lights (Bluetooth) | Button | No |
+| Honk horn (Bluetooth) | Button | No |
+| Play fart (Bluetooth) | Button | No |
+| Homelink (Bluetooth) | Button | No |
+| Keyless driving (Bluetooth) | Button | No |
+| Install update (Bluetooth) | Button | No |
 
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
 - The entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state and switch states stay on the Teslemetry entities. The numbers always show `unknown`.
 - Charging amps and Charge limit use the car's own maximum from Teslemetry's data, the same value Teslemetry's own numbers use. While Teslemetry has no value, the maximum is 48 A and 100 %. This integration never asks the cloud for the value, so a streaming car sends it only while Teslemetry's own Charging amps entity is enabled.
 - Wake sends only the Bluetooth wake signal. The car can take a few more seconds to answer other commands after it wakes. The button never wakes the car through the cloud.
+- Flash lights, Honk horn, Play fart, Homelink, Keyless driving and Install update are added only where Teslemetry added its own entity for the same command. They are disabled by default.
+- Homelink sends the Home Assistant home location, as Teslemetry does.
+- Install update starts a software update that the car has already downloaded. If no update is waiting, the car refuses the command.
 - Lock and Unlock are buttons, not a lock entity, so voice assistants do not ask for a confirmation or code. They are disabled by default; enable them only if you accept that.
 - Play/pause toggles playback: it plays if the car is paused and pauses if the car is playing. Volume uses the car's own scale from 0 to 10.33, the same scale Teslemetry uses: Teslemetry's media player volume of 100 % is 10.33. The current playback and volume stay on Teslemetry's media player.
 - Each of Teslemetry's command switches (Sentry mode, Valet mode, Auto seat climate left and right, Auto steering wheel heater, Defrost and Guest mode) has an On and an Off button, because a switch would need the car's state. The buttons are disabled by default. Valet mode on sends an empty PIN, as Teslemetry's switch does. Guest mode buttons are added only to vehicles that Teslemetry streams, as Teslemetry's own Guest mode switch is.
