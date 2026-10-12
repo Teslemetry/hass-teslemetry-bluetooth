@@ -2,9 +2,7 @@
 
 from datetime import timedelta
 import logging
-from typing import Any, Final
-
-import probatio
+from typing import Final
 
 DOMAIN: Final = "teslemetry_bluetooth"
 TESLEMETRY_DOMAIN: Final = "teslemetry"
@@ -27,23 +25,15 @@ CHARGE_LIMIT_MAX: Final = 100
 CHARGING_AMPS_MIN: Final = 0
 CHARGING_AMPS_MAX: Final = 48
 
-# Every command this integration sends, with the schema of its arguments.
-COMMANDS: Final[dict[str, dict[Any, Any]]] = {
-    "charge_start": {},
-    "charge_stop": {},
-    "door_lock": {},
-    "door_unlock": {},
-    "set_charge_limit": {
-        probatio.Required("percent"): probatio.All(
-            probatio.Coerce(int), probatio.Range(CHARGE_LIMIT_MIN, CHARGE_LIMIT_MAX)
-        )
-    },
-    "set_charging_amps": {
-        probatio.Required("charging_amps"): probatio.All(
-            probatio.Coerce(int), probatio.Range(CHARGING_AMPS_MIN, CHARGING_AMPS_MAX)
-        )
-    },
-}
+# Every command this integration sends.
+COMMANDS: Final = (
+    "charge_start",
+    "charge_stop",
+    "door_lock",
+    "door_unlock",
+    "set_charge_limit",
+    "set_charging_amps",
+)
 
 # Vehicle command results that mean the car is already in the requested state.
 ACCEPTED_REASONS: Final = ("already_set", "not_charging", "requested")
