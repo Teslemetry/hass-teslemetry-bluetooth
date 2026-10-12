@@ -55,24 +55,31 @@ class FakeCoordinator:
             listener()
 
 
-class FakeStreamVehicle:
-    """A stand-in for Teslemetry's TeslemetryStreamVehicle."""
+class FakeStream:
+    """A stand-in for Teslemetry's TeslemetryStream."""
 
     def __init__(self) -> None:
         """Initialize with no listeners."""
-        self.current_request_max: list[Callable[[int | None], None]] = []
+        self.listeners: list[
+            tuple[Callable[[dict[str, Any]], None], dict[str, Any], bool]
+        ] = []
 
-    def listen_ChargeCurrentRequestMax(
-        self, listener: Callable[[int | None], None]
+    def async_add_listener(
+        self,
+        callback: Callable[[dict[str, Any]], None],
+        filters: dict[str, Any],
+        internal: bool = False,
     ) -> Callable[[], None]:
-        """Add a ChargeCurrentRequestMax listener."""
-        self.current_request_max.append(listener)
-        return lambda: self.current_request_max.remove(listener)
+        """Add a listener."""
+        listener = (callback, filters, internal)
+        self.listeners.append(listener)
+        return lambda: self.listeners.remove(listener)
 
-    def send_current_request_max(self, value: int | None) -> None:
-        """Stream a ChargeCurrentRequestMax value."""
-        for listener in list(self.current_request_max):
-            listener(value)
+    def send(self, data: dict[str, Any]) -> None:
+        """Stream vehicle data to each listener whose filter matches."""
+        for callback, filters, _ in list(self.listeners):
+            if filters["vin"] == VIN and filters["data"].keys() <= data.keys():
+                callback({"vin": VIN, "data": data})
 
 
 class FakeTeslemetry:
@@ -90,7 +97,9 @@ class FakeTeslemetry:
         self.poll = False
         self.firmware = "2026.20.1"
         self.coordinator = FakeCoordinator()
-        self.stream_vehicle = FakeStreamVehicle()
+        self.stream = FakeStream()
+        # Only the stream is set: the vehicle's listen_* helpers call the cloud.
+        self.stream_vehicle = SimpleNamespace(stream=self.stream)
 
     @staticmethod
     def make_backend(name: str) -> MagicMock:

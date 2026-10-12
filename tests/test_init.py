@@ -371,6 +371,21 @@ async def test_send_command_unpaired_device(
             SimpleNamespace(vehicles=[SimpleNamespace(vin=VIN, device={})]),
             id="no_api",
         ),
+        pytest.param(
+            SimpleNamespace(
+                vehicles=[
+                    SimpleNamespace(
+                        api=None,
+                        vin=VIN,
+                        poll=False,
+                        firmware="2026.20.1",
+                        stream_vehicle=None,
+                        device={},
+                    )
+                ]
+            ),
+            id="no_coordinator",
+        ),
     ],
 )
 async def test_incompatible_teslemetry(

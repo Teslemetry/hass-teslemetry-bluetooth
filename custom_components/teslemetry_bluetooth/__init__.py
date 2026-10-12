@@ -64,7 +64,14 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
         if (vehicle_list := getattr(runtime, "vehicles", None)) is None:
             raise IncompatibleTeslemetry("runtime_data.vehicles")
         for vehicle_data in vehicle_list:
-            for attr in ("api", "vin"):
+            for attr in (
+                "api",
+                "vin",
+                "poll",
+                "firmware",
+                "coordinator",
+                "stream_vehicle",
+            ):
                 if not hasattr(vehicle_data, attr):
                     raise IncompatibleTeslemetry(f"vehicle.{attr}")
             api = vehicle_data.api

@@ -1,7 +1,12 @@
 """Tests for the Teslemetry Bluetooth Commands numbers."""
 
 import pytest
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    mock_restore_cache_with_extra_data,
+)
 
+from custom_components.teslemetry_bluetooth.const import DOMAIN
 from homeassistant.components.number import (
     ATTR_MAX,
     ATTR_MIN,
@@ -9,11 +14,12 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from homeassistant.core import HomeAssistant, State
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_registry as er
 
-from .conftest import FakeTeslemetry, setup_integration
+from .conftest import VIN, FakeTeslemetry, setup_integration
 
 CHARGE_LIMIT = "number.test_car_charge_limit_bluetooth"
 CHARGING_AMPS = "number.test_car_charging_amps_bluetooth"
@@ -34,8 +40,10 @@ async def test_streaming_max(hass: HomeAssistant, teslemetry: FakeTeslemetry) ->
     # Unknown until the stream sends it.
     assert _limits(hass, CHARGING_AMPS) == (0, 48)
     assert _limits(hass, CHARGE_LIMIT) == (50, 100)
+    # A passive listener: it never opens or holds the stream by itself.
+    assert [internal for _, _, internal in teslemetry.stream.listeners] == [True]
 
-    teslemetry.stream_vehicle.send_current_request_max(32)
+    teslemetry.stream.send({"ChargeCurrentRequestMax": 32})
     assert _limits(hass, CHARGING_AMPS) == (0, 32)
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(
@@ -46,7 +54,11 @@ async def test_streaming_max(hass: HomeAssistant, teslemetry: FakeTeslemetry) ->
         )
     teslemetry.bluetooth.set_charging_amps.assert_not_awaited()
 
-    teslemetry.stream_vehicle.send_current_request_max(None)
+    # Some vehicles stream integers as strings.
+    teslemetry.stream.send({"ChargeCurrentRequestMax": "40"})
+    assert _limits(hass, CHARGING_AMPS) == (0, 40)
+
+    teslemetry.stream.send({"ChargeCurrentRequestMax": None})
     assert _limits(hass, CHARGING_AMPS) == (0, 48)
     # The stream has no charge limit maximum, so Teslemetry's coordinator is unused.
     teslemetry.coordinator.async_set_updated_data(
@@ -95,20 +107,58 @@ async def test_polling_max(
     assert _limits(hass, CHARGE_LIMIT) == (50, 100)
 
     # The stream does not drive a polled car.
-    teslemetry.stream_vehicle.send_current_request_max(16)
+    teslemetry.stream.send({"ChargeCurrentRequestMax": 16})
     assert _limits(hass, CHARGING_AMPS) == (0, 24)
     teslemetry.assert_cloud_unused()
 
 
+@pytest.mark.usefixtures("teslemetry_entry")
+async def test_streaming_max_restored(
+    hass: HomeAssistant, config_entry: MockConfigEntry, teslemetry: FakeTeslemetry
+) -> None:
+    """A streaming car keeps its last maximum over a restart."""
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(CHARGING_AMPS, STATE_UNKNOWN),
+                {
+                    "native_max_value": 32,
+                    "native_min_value": 0,
+                    "native_step": 1,
+                    "native_unit_of_measurement": "A",
+                    "native_value": None,
+                },
+            )
+        ],
+    )
+    # The entity id must be registered for the restored state to apply.
+    er.async_get(hass).async_get_or_create(
+        NUMBER_DOMAIN,
+        DOMAIN,
+        f"{VIN}-bluetooth-set_charging_amps",
+        suggested_object_id="test_car_charging_amps_bluetooth",
+    )
+    await setup_integration(hass)
+
+    assert _limits(hass, CHARGING_AMPS) == (0, 32)
+    teslemetry.stream.send({"ChargeCurrentRequestMax": 24})
+    assert _limits(hass, CHARGING_AMPS) == (0, 24)
+
+
+@pytest.mark.parametrize("poll", [True, False], ids=["polling", "streaming"])
 @pytest.mark.usefixtures("teslemetry_entry", "config_entry")
 async def test_listeners_removed_on_unload(
-    hass: HomeAssistant, teslemetry: FakeTeslemetry
+    hass: HomeAssistant, teslemetry: FakeTeslemetry, poll: bool
 ) -> None:
     """Unloading removes the maximum listeners from Teslemetry's data."""
-    teslemetry.poll = True
+    teslemetry.poll = poll
     await setup_integration(hass)
-    assert len(teslemetry.coordinator.listeners) == 2
+    assert len(teslemetry.coordinator.listeners) + len(teslemetry.stream.listeners) == (
+        2 if poll else 1
+    )
 
-    (entry,) = hass.config_entries.async_entries("teslemetry_bluetooth")
+    (entry,) = hass.config_entries.async_entries(DOMAIN)
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert teslemetry.coordinator.listeners == []
+    assert teslemetry.stream.listeners == []

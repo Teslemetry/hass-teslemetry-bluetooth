@@ -1,6 +1,5 @@
 """Bluetooth-only command numbers for Teslemetry vehicles."""
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, override
 
@@ -8,9 +7,9 @@ from tesla_fleet_api import firmware_at_least
 
 from homeassistant.components.number import (
     NumberDeviceClass,
-    NumberEntity,
     NumberEntityDescription,
     NumberMode,
+    RestoreNumber,
 )
 from homeassistant.const import PERCENTAGE, PRECISION_WHOLE, UnitOfElectricCurrent
 from homeassistant.core import HomeAssistant, callback
@@ -39,10 +38,8 @@ class TeslemetryBluetoothNumberEntityDescription(NumberEntityDescription):
     native_max_value: float
     # Teslemetry's vehicle_data key for the car's own maximum.
     max_key: str
-    # Teslemetry's stream listener for the same maximum, if the stream has one.
-    max_listener: (
-        Callable[[Any, Callable[[int | None], None]], Callable[[], None]] | None
-    ) = None
+    # Teslemetry's stream field for the same maximum, if the stream has one.
+    max_field: str | None = None
 
 
 # The key of each description is also the Bluetooth command it sends.
@@ -64,7 +61,7 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothNumberEntityDescription, ...] = (
         native_min_value=CHARGING_AMPS_MIN,
         native_max_value=CHARGING_AMPS_MAX,
         max_key="charge_state_charge_current_request_max",
-        max_listener=lambda x, y: x.listen_ChargeCurrentRequestMax(y),
+        max_field="ChargeCurrentRequestMax",
         native_step=PRECISION_WHOLE,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=NumberDeviceClass.CURRENT,
@@ -86,7 +83,7 @@ async def async_setup_entry(
     )
 
 
-class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, NumberEntity):
+class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
     """A number that sends its value over Bluetooth.
 
     It has no state: the current value stays on Teslemetry's own entity.
@@ -113,22 +110,29 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, NumberEntity):
         data = self.vehicle.data
         # Teslemetry reads polled vehicles and old firmware from its vehicle
         # coordinator, and every other vehicle from its stream.
-        if getattr(data, "poll", False) or not firmware_at_least(
-            getattr(data, "firmware", ""), "2024.26"
-        ):
-            if (coordinator := getattr(data, "coordinator", None)) is not None:
-                self._update_max_from_coordinator()
-                self.async_on_remove(
-                    coordinator.async_add_listener(self._handle_coordinator_update)
-                )
-        elif self.entity_description.max_listener is not None and (
-            stream_vehicle := getattr(data, "stream_vehicle", None)
-        ):
+        if data.poll or not firmware_at_least(data.firmware, "2024.26"):
+            self._update_max_from_coordinator()
             self.async_on_remove(
-                self.entity_description.max_listener(
-                    stream_vehicle, self._handle_max_update
-                )
+                data.coordinator.async_add_listener(self._handle_coordinator_update)
             )
+            return
+        if (field := self.entity_description.max_field) is None:
+            return
+        # The stream does not resend a value, so keep the last one over restarts.
+        if (
+            last_number_data := await self.async_get_last_number_data()
+        ) and last_number_data.native_max_value:
+            self._attr_native_max_value = last_number_data.native_max_value
+        # Listen on the stream itself: the vehicle's listen_* helpers enable the
+        # field in the vehicle's streaming config through the cloud. An internal
+        # listener also never opens or holds the stream connection by itself.
+        self.async_on_remove(
+            data.stream_vehicle.stream.async_add_listener(
+                self._handle_stream_update,
+                {"vin": self.vehicle.vin, "data": {field: None}},
+                internal=True,
+            )
+        )
 
     def _update_max_from_coordinator(self) -> None:
         """Read the maximum from Teslemetry's vehicle coordinator data."""
@@ -146,10 +150,12 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, NumberEntity):
         self.async_write_ha_state()
 
     @callback
-    def _handle_max_update(self, value: int | None) -> None:
+    def _handle_stream_update(self, event: dict[str, Any]) -> None:
         """Update the maximum from Teslemetry's stream."""
+        value = event["data"][self.entity_description.max_field]
+        # Some vehicles stream integers as strings.
         self._attr_native_max_value = (
-            self.entity_description.native_max_value if value is None else value
+            self.entity_description.native_max_value if value is None else int(value)
         )
         self.async_write_ha_state()
 
