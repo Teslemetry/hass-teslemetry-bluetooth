@@ -8,7 +8,21 @@
       "door_unlock": { "default": "mdi:car-door-lock-open" },
       "media_toggle_playback": { "default": "mdi:play-pause" },
       "media_next_track": { "default": "mdi:skip-next" },
-      "media_prev_track": { "default": "mdi:skip-previous" }
+      "media_prev_track": { "default": "mdi:skip-previous" },
+      "vehicle_state_sentry_mode_on": { "default": "mdi:shield-car" },
+      "vehicle_state_sentry_mode_off": { "default": "mdi:shield-car" },
+      "vehicle_state_valet_mode_on": { "default": "mdi:speedometer-slow" },
+      "vehicle_state_valet_mode_off": { "default": "mdi:speedometer-slow" },
+      "climate_state_auto_seat_climate_left_on": { "default": "mdi:car-seat-heater" },
+      "climate_state_auto_seat_climate_left_off": { "default": "mdi:car-seat" },
+      "climate_state_auto_seat_climate_right_on": { "default": "mdi:car-seat-heater" },
+      "climate_state_auto_seat_climate_right_off": { "default": "mdi:car-seat" },
+      "climate_state_auto_steering_wheel_heat_on": { "default": "mdi:steering" },
+      "climate_state_auto_steering_wheel_heat_off": { "default": "mdi:steering" },
+      "climate_state_defrost_mode_on": { "default": "mdi:snowflake-melt" },
+      "climate_state_defrost_mode_off": { "default": "mdi:snowflake-melt" },
+      "guest_mode_enabled_on": { "default": "mdi:account-group" },
+      "guest_mode_enabled_off": { "default": "mdi:account-group" }
     },
     "number": {
       "set_charge_limit": { "default": "mdi:battery-charging-80" },

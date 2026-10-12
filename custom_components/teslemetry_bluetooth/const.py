@@ -41,6 +41,12 @@ COMMANDS: Final = (
     "media_next_track",
     "media_prev_track",
     "adjust_volume",
+    "set_sentry_mode",
+    "set_valet_mode",
+    "remote_auto_seat_climate_request",
+    "remote_auto_steering_wheel_heat_climate_request",
+    "set_preconditioning_max",
+    "guest_mode",
 )
 
 # Vehicle command results that mean the car is already in the requested state.
