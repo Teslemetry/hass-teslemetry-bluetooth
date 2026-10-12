@@ -12,7 +12,7 @@ from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import ACCEPTED_REASONS, DOMAIN, LOGGER
+from .const import ACCEPTED_REASONS, CLIMATE_STREAMING_FIRMWARE, DOMAIN, LOGGER
 
 # Failures a Bluetooth command can raise. TeslaFleetError is a BaseException,
 # and the library raises ValueError when the session key is missing.
@@ -34,6 +34,7 @@ class TeslemetryBluetoothVehicle:
         vin: str,
         device: DeviceEntry,
         data: Any,
+        config: dict[str, Any],
     ) -> None:
         """Initialize the vehicle."""
         self.router = router
@@ -41,6 +42,8 @@ class TeslemetryBluetoothVehicle:
         # Teslemetry's TeslemetryVehicleData, read only for the car's own limits
         # and whether Teslemetry streams the car.
         self.data = data
+        # The vehicle config from Teslemetry's metadata, read for the car's options.
+        self.config = config
         # Teslemetry's own device for the vehicle; entities attach to it.
         self.device = device
         self.name = device.name_by_user or device.name or vin
@@ -52,6 +55,25 @@ class TeslemetryBluetoothVehicle:
         """Return if Teslemetry reads this vehicle from its stream."""
         # Teslemetry polls a vehicle set to poll, or with older firmware.
         return not self.data.poll and firmware_at_least(self.data.firmware, "2024.26")
+
+    @property
+    def climate_polled(self) -> bool:
+        """Return if Teslemetry reads the car's climate from its vehicle coordinator."""
+        return bool(self.data.poll) or not firmware_at_least(
+            self.data.firmware, CLIMATE_STREAMING_FIRMWARE
+        )
+
+    @property
+    def cop_temperature_supported(self) -> bool:
+        """Return if the car can set its cabin overheat protection temperature."""
+        # The same sources Teslemetry's cabin overheat protection entity reads.
+        if self.climate_polled:
+            return bool(
+                self.data.coordinator.data.get(
+                    "vehicle_config_cop_user_set_temp_supported"
+                )
+            )
+        return bool(self.config.get("cop_user_set_temp_supported"))
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> CALLBACK_TYPE:

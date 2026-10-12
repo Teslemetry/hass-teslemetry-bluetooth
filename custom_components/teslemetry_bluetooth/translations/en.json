@@ -128,6 +128,18 @@
       },
       "stop_tonneau": {
         "name": "Stop tonneau (Bluetooth)"
+      },
+      "auto_conditioning_start": {
+        "name": "Climate on (Bluetooth)"
+      },
+      "auto_conditioning_stop": {
+        "name": "Climate off (Bluetooth)"
+      },
+      "set_bioweapon_mode_on": {
+        "name": "Bioweapon defense on (Bluetooth)"
+      },
+      "set_bioweapon_mode_off": {
+        "name": "Bioweapon defense off (Bluetooth)"
       }
     },
     "number": {
@@ -139,6 +151,36 @@
       },
       "adjust_volume": {
         "name": "Volume (Bluetooth)"
+      },
+      "set_temps": {
+        "name": "Target temperature (Bluetooth)"
+      }
+    },
+    "select": {
+      "set_climate_keeper_mode": {
+        "name": "Climate keeper mode (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "keep": "Keep mode",
+          "dog": "Dog mode",
+          "camp": "Camp mode"
+        }
+      },
+      "set_cabin_overheat_protection": {
+        "name": "Cabin overheat protection (Bluetooth)",
+        "state": {
+          "off": "Off",
+          "on": "On",
+          "fan_only": "Fan only"
+        }
+      },
+      "set_cop_temp": {
+        "name": "Cabin overheat protection temperature (Bluetooth)",
+        "state": {
+          "low": "30 °C",
+          "medium": "35 °C",
+          "high": "40 °C"
+        }
       }
     }
   },

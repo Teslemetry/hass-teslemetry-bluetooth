@@ -71,10 +71,20 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 | Open tonneau (Bluetooth) | Button | No |
 | Close tonneau (Bluetooth) | Button | No |
 | Stop tonneau (Bluetooth) | Button | No |
+| Climate on (Bluetooth) | Button | No |
+| Climate off (Bluetooth) | Button | No |
+| Target temperature (Bluetooth) | Number (15-28 °C, or the car's own range) | No |
+| Climate keeper mode (Bluetooth) | Select (Off, Keep mode, Dog mode, Camp mode) | No |
+| Bioweapon defense on (Bluetooth) | Button, only for cars whose climate Teslemetry polls | No |
+| Bioweapon defense off (Bluetooth) | Button, only for cars whose climate Teslemetry polls | No |
+| Cabin overheat protection (Bluetooth) | Select (Off, On, Fan only) | No |
+| Cabin overheat protection temperature (Bluetooth) | Select (30, 35 or 40 °C), only for cars that support it | No |
 
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
-- The entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state and switch states stay on the Teslemetry entities. The numbers always show `unknown`.
+- The entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state, switch states and climate state stay on the Teslemetry entities. The numbers and selects always show `unknown`.
 - Charging amps and Charge limit use the car's own maximum from Teslemetry's data, the same value Teslemetry's own numbers use. While Teslemetry has no value, the maximum is 48 A and 100 %. This integration never asks the cloud for the value, so a streaming car sends it only while Teslemetry's own Charging amps entity is enabled.
+- Target temperature sets both the driver and the passenger temperature. For a car whose climate Teslemetry polls, its range is the car's own range from Teslemetry's data. For any other car, the range is 15-28 °C.
+- Bioweapon defense and Cabin overheat protection temperature follow the Teslemetry climate entities: they are added only to cars where Teslemetry offers bioweapon defense or the cabin overheat protection temperature.
 - Wake sends only the Bluetooth wake signal. The car can take a few more seconds to answer other commands after it wakes. The button never wakes the car through the cloud.
 - Flash lights, Honk horn, Play fart, Homelink, Keyless driving and Install update are added only where Teslemetry added its own entity for the same command. They are disabled by default.
 - Homelink sends the Home Assistant home location, as Teslemetry does.

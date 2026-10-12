@@ -29,8 +29,14 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
+from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    ATTR_OPTION,
+    SERVICE_SELECT_OPTION,
+    STATE_UNAVAILABLE,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
@@ -85,6 +91,12 @@ PLAY_PAUSE = "button.test_car_play_pause_bluetooth"
 NEXT_TRACK = "button.test_car_next_track_bluetooth"
 PREVIOUS_TRACK = "button.test_car_previous_track_bluetooth"
 VOLUME = "number.test_car_volume_bluetooth"
+CLIMATE_ON = "button.test_car_climate_on_bluetooth"
+CLIMATE_OFF = "button.test_car_climate_off_bluetooth"
+TARGET_TEMPERATURE = "number.test_car_target_temperature_bluetooth"
+CLIMATE_KEEPER = "select.test_car_climate_keeper_mode_bluetooth"
+COP = "select.test_car_cabin_overheat_protection_bluetooth"
+COP_TEMPERATURE = "select.test_car_cabin_overheat_protection_temperature_bluetooth"
 
 # (entity, platform service, service data, Bluetooth command, command kwargs)
 ENTITY_COMMANDS = [
@@ -145,6 +157,40 @@ ENTITY_COMMANDS = [
         "adjust_volume",
         {"volume": 5.0},
     ),
+    (CLIMATE_ON, BUTTON_DOMAIN, SERVICE_PRESS, {}, "auto_conditioning_start", {}),
+    (CLIMATE_OFF, BUTTON_DOMAIN, SERVICE_PRESS, {}, "auto_conditioning_stop", {}),
+    (
+        TARGET_TEMPERATURE,
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_VALUE: 21.5},
+        "set_temps",
+        {"driver_temp": 21.5, "passenger_temp": 21.5},
+    ),
+    (
+        CLIMATE_KEEPER,
+        SELECT_DOMAIN,
+        SERVICE_SELECT_OPTION,
+        {ATTR_OPTION: "dog"},
+        "set_climate_keeper_mode",
+        {"climate_keeper_mode": 2},
+    ),
+    (
+        COP,
+        SELECT_DOMAIN,
+        SERVICE_SELECT_OPTION,
+        {ATTR_OPTION: "fan_only"},
+        "set_cabin_overheat_protection",
+        {"on": True, "fan_only": True},
+    ),
+    (
+        COP_TEMPERATURE,
+        SELECT_DOMAIN,
+        SERVICE_SELECT_OPTION,
+        {ATTR_OPTION: "high"},
+        "set_cop_temp",
+        {"cop_temp": 2},
+    ),
 ]
 
 FAILURES = [
@@ -203,6 +249,12 @@ async def test_entities(
         (OPEN_TONNEAU, False),
         (CLOSE_TONNEAU, False),
         (STOP_TONNEAU, False),
+        (CLIMATE_ON, False),
+        (CLIMATE_OFF, False),
+        (TARGET_TEMPERATURE, False),
+        (CLIMATE_KEEPER, False),
+        (COP, False),
+        (COP_TEMPERATURE, False),
     ):
         entry = entity_registry.async_get(entity_id)
         assert entry is not None, entity_id
@@ -229,9 +281,9 @@ async def test_entity_command_in_range(
     entity_id: str,
     domain: str,
     service: str,
-    data: dict[str, float],
+    data: dict[str, float | str],
     command: str,
-    kwargs: dict[str, float],
+    kwargs: dict[str, float | bool],
 ) -> None:
     """In range, each entity sends its command over Bluetooth only."""
     await setup_integration(hass)
@@ -527,6 +579,26 @@ async def test_incompatible_vehicle_data(
     issue = issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
     assert issue is not None
     assert issue.translation_placeholders["missing"] == "vehicle.coordinator"
+
+
+@pytest.mark.usefixtures("teslemetry_entry")
+async def test_incompatible_metadata(
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+    teslemetry: FakeTeslemetry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Teslemetry without its metadata coordinator raises the repair."""
+    teslemetry.runtime_data = teslemetry.build_runtime_data()
+    del teslemetry.runtime_data.metadata_coordinator
+    await setup_integration(hass)
+
+    assert config_entry.state is ConfigEntryState.SETUP_ERROR
+    issue = issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
+    assert issue is not None
+    assert (
+        issue.translation_placeholders["missing"] == "runtime_data.metadata_coordinator"
+    )
 
 
 @pytest.mark.usefixtures("teslemetry_entry", "config_entry")

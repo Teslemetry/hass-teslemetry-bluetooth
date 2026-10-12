@@ -210,6 +210,27 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothButtonEntityDescription, ...] = (
         device_class=ButtonDeviceClass.UPDATE,
         entity_registry_enabled_default=False,
     ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="auto_conditioning_start", entity_registry_enabled_default=False
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="auto_conditioning_stop", entity_registry_enabled_default=False
+    ),
+    # Teslemetry offers bioweapon defense only on polled climate entities.
+    TeslemetryBluetoothButtonEntityDescription(
+        key="set_bioweapon_mode_on",
+        command="set_bioweapon_mode",
+        arguments={"on": True, "manual_override": True},
+        supported_fn=lambda vehicle: vehicle.climate_polled,
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="set_bioweapon_mode_off",
+        command="set_bioweapon_mode",
+        arguments={"on": False, "manual_override": True},
+        supported_fn=lambda vehicle: vehicle.climate_polled,
+        entity_registry_enabled_default=False,
+    ),
 )
 
 
