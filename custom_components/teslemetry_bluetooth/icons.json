@@ -10,8 +10,5 @@
       "set_charge_limit": { "default": "mdi:battery-charging-80" },
       "set_charging_amps": { "default": "mdi:current-ac" }
     }
-  },
-  "services": {
-    "send_command": { "service": "mdi:bluetooth-transfer" }
   }
 }

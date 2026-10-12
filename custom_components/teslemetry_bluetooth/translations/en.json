@@ -47,55 +47,14 @@
     "incompatible_teslemetry": {
       "message": "The installed Teslemetry integration does not provide the Bluetooth connection this integration needs (missing: {missing}). Install Teslemetry from {version} or later."
     },
-    "invalid_arguments": {
-      "message": "Invalid arguments for {command}: {error}."
-    },
-    "invalid_device": {
-      "message": "The device was not found."
-    },
     "not_in_range": {
       "message": "{vehicle} was not reached over Bluetooth: it is not in Bluetooth range. The command was not sent to the cloud."
-    },
-    "not_paired": {
-      "message": "{device} is not a Teslemetry vehicle paired over Bluetooth."
     }
   },
   "issues": {
     "incompatible_teslemetry": {
       "description": "The installed Teslemetry integration does not provide the Bluetooth connection that Teslemetry Bluetooth Commands needs (missing: {missing}). No Bluetooth command entities were added. Install Teslemetry from {version} or later, then restart Home Assistant.",
       "title": "Teslemetry Bluetooth Commands needs a newer Teslemetry"
-    }
-  },
-  "selector": {
-    "command": {
-      "options": {
-        "charge_start": "Start charging",
-        "charge_stop": "Stop charging",
-        "door_lock": "Lock",
-        "door_unlock": "Unlock",
-        "set_charge_limit": "Set charge limit (argument: percent)",
-        "set_charging_amps": "Set charging amps (argument: charging_amps)"
-      }
-    }
-  },
-  "services": {
-    "send_command": {
-      "description": "Sends a command to a Teslemetry vehicle over Bluetooth only. If the vehicle is not reached over Bluetooth, the action fails and the command is not sent to the cloud.",
-      "fields": {
-        "arguments": {
-          "description": "Arguments for the command: percent for set charge limit, charging_amps for set charging amps. Other commands take none.",
-          "name": "Arguments"
-        },
-        "command": {
-          "description": "The command to send.",
-          "name": "Command"
-        },
-        "device_id": {
-          "description": "The Teslemetry vehicle.",
-          "name": "Vehicle"
-        }
-      },
-      "name": "Send Bluetooth command"
     }
   }
 }

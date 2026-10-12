@@ -30,9 +30,9 @@ from homeassistant.components.number import (
     SERVICE_SET_VALUE,
 )
 from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     device_registry as dr,
     entity_registry as er,
@@ -177,15 +177,6 @@ async def test_out_of_range(
     for entity_id, *_ in ENTITY_COMMANDS:
         assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
 
-    # The action fails the same way.
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(
-            DOMAIN,
-            "send_command",
-            {ATTR_DEVICE_ID: _device_id(hass), "command": "door_unlock"},
-            blocking=True,
-        )
-    assert exc.value.translation_key == "not_in_range"
     teslemetry.bluetooth.charge_start.assert_not_awaited()
     teslemetry.bluetooth.door_unlock.assert_not_awaited()
     teslemetry.assert_cloud_unused()
@@ -288,78 +279,6 @@ async def test_command_refused(
         )
     assert exc.value.translation_key == translation_key
     teslemetry.assert_cloud_unused()
-
-
-@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
-async def test_send_command_action(
-    hass: HomeAssistant, teslemetry: FakeTeslemetry
-) -> None:
-    """The action sends a command with arguments over Bluetooth only."""
-    await setup_integration(hass)
-    device_id = _device_id(hass)
-
-    await hass.services.async_call(
-        DOMAIN,
-        "send_command",
-        {
-            ATTR_DEVICE_ID: device_id,
-            "command": "set_charging_amps",
-            "arguments": {"charging_amps": 12},
-        },
-        blocking=True,
-    )
-    teslemetry.bluetooth.set_charging_amps.assert_awaited_once_with(charging_amps=12)
-
-    with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(
-            DOMAIN,
-            "send_command",
-            {ATTR_DEVICE_ID: device_id, "command": "set_charge_limit"},
-            blocking=True,
-        )
-    assert exc.value.translation_key == "invalid_arguments"
-
-    teslemetry.bluetooth.door_lock.side_effect = BluetoothTransportError()
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(
-            DOMAIN,
-            "send_command",
-            {ATTR_DEVICE_ID: device_id, "command": "door_lock"},
-            blocking=True,
-        )
-    assert exc.value.translation_key == "bluetooth_failed"
-    teslemetry.assert_cloud_unused()
-
-
-@pytest.mark.usefixtures("teslemetry_entry", "config_entry")
-async def test_send_command_unpaired_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
-    """The action refuses a device that is not a Bluetooth-paired vehicle."""
-    await setup_integration(hass)
-    other = MockConfigEntry(domain="other")
-    other.add_to_hass(hass)
-    device = device_registry.async_get_or_create(
-        config_entry_id=other.entry_id, identifiers={("other", "x")}, name="Other"
-    )
-
-    with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(
-            DOMAIN,
-            "send_command",
-            {ATTR_DEVICE_ID: device.id, "command": "charge_start"},
-            blocking=True,
-        )
-    assert exc.value.translation_key == "not_paired"
-
-    with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(
-            DOMAIN,
-            "send_command",
-            {ATTR_DEVICE_ID: "missing", "command": "charge_start"},
-            blocking=True,
-        )
-    assert exc.value.translation_key == "invalid_device"
 
 
 @pytest.mark.usefixtures("teslemetry_entry")
