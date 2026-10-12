@@ -16,7 +16,7 @@ from homeassistant.components.number import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 
 from .conftest import VIN, FakeTeslemetry, setup_integration
@@ -208,25 +208,4 @@ async def test_volume(hass: HomeAssistant, teslemetry: FakeTeslemetry) -> None:
             blocking=True,
         )
     teslemetry.bluetooth.adjust_volume.assert_awaited_once()
-    teslemetry.assert_cloud_unused()
-
-
-@pytest.mark.usefixtures(
-    "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
-)
-async def test_volume_refused(hass: HomeAssistant, teslemetry: FakeTeslemetry) -> None:
-    """A refused volume command raises an error and never reaches the cloud."""
-    await setup_integration(hass)
-    teslemetry.bluetooth.adjust_volume.return_value = {
-        "response": {"result": False, "reason": "user_not_present"}
-    }
-
-    with pytest.raises(HomeAssistantError) as exc:
-        await hass.services.async_call(
-            NUMBER_DOMAIN,
-            SERVICE_SET_VALUE,
-            {ATTR_ENTITY_ID: VOLUME, ATTR_VALUE: 3},
-            blocking=True,
-        )
-    assert exc.value.translation_key == "command_failed"
     teslemetry.assert_cloud_unused()

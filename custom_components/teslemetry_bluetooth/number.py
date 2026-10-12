@@ -89,15 +89,14 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the numbers."""
-    async_add_entities(
-        TeslemetryBluetoothNumberEntity(vehicle, description)
-        for vehicle in entry.runtime_data.values()
-        for description in DESCRIPTIONS
-    )
-    async_add_entities(
-        TeslemetryBluetoothVolumeEntity(vehicle, VOLUME_DESCRIPTION)
-        for vehicle in entry.runtime_data.values()
-    )
+    entities: list[NumberEntity] = []
+    for vehicle in entry.runtime_data.values():
+        entities.extend(
+            TeslemetryBluetoothNumberEntity(vehicle, description)
+            for description in DESCRIPTIONS
+        )
+        entities.append(TeslemetryBluetoothVolumeEntity(vehicle, VOLUME_DESCRIPTION))
+    async_add_entities(entities)
 
 
 class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):

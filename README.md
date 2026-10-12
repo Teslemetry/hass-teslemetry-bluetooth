@@ -46,7 +46,7 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 - Charging amps and Charge limit use the car's own maximum from Teslemetry's data, the same value Teslemetry's own numbers use. While Teslemetry has no value, the maximum is 48 A and 100 %. This integration never asks the cloud for the value, so a streaming car sends it only while Teslemetry's own Charging amps entity is enabled.
 - Wake sends only the Bluetooth wake signal. The car can take a few more seconds to answer other commands after it wakes. The button never wakes the car through the cloud.
 - Lock and Unlock are buttons, not a lock entity, so voice assistants do not ask for a confirmation or code. They are disabled by default; enable them only if you accept that.
-- Play/pause toggles playback: it plays if the car is paused and pauses if the car is playing. Volume uses the car's own scale, the one on its screen. The current playback and volume stay on Teslemetry's media player.
+- Play/pause toggles playback: it plays if the car is paused and pauses if the car is playing. Volume uses the car's own scale from 0 to 10.33, the same scale Teslemetry uses: Teslemetry's media player volume of 100 % is 10.33. The current playback and volume stay on Teslemetry's media player.
 
 ## Errors
 
