@@ -7,9 +7,12 @@ from typing import TYPE_CHECKING, Any, override
 from tesla_fleet_api.const import AutoSeat
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from .const import DOMAIN
 from .entity import TeslemetryBluetoothEntity
 from .vehicle import TeslemetryBluetoothVehicle
 
@@ -112,12 +115,19 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the buttons."""
-    async_add_entities(
-        TeslemetryBluetoothButtonEntity(vehicle, description)
-        for vehicle in entry.runtime_data.values()
-        for description in DESCRIPTIONS
-        if description.supported_fn(vehicle)
-    )
+    entity_registry = er.async_get(hass)
+    entities: list[TeslemetryBluetoothButtonEntity] = []
+    for vehicle in entry.runtime_data.values():
+        for description in DESCRIPTIONS:
+            if description.supported_fn(vehicle):
+                entities.append(TeslemetryBluetoothButtonEntity(vehicle, description))
+            # Remove a button the vehicle had before, such as Guest mode on a
+            # car that Teslemetry no longer streams.
+            elif entity_id := entity_registry.async_get_entity_id(
+                Platform.BUTTON, DOMAIN, f"{vehicle.vin}-bluetooth-{description.key}"
+            ):
+                entity_registry.async_remove(entity_id)
+    async_add_entities(entities)
 
 
 class TeslemetryBluetoothButtonEntity(TeslemetryBluetoothEntity, ButtonEntity):

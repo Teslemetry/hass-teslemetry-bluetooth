@@ -40,6 +40,7 @@ from homeassistant.helpers import (
 )
 
 from .conftest import ADDRESS, VIN, FakeTeslemetry, setup_integration
+from .test_button import SWITCH_BUTTONS
 
 WAKE = "button.test_car_wake_bluetooth"
 START_CHARGING = "button.test_car_start_charging_bluetooth"
@@ -495,9 +496,9 @@ async def test_unpaired_vehicle_entities_removed(
 ) -> None:
     """A vehicle that loses its Bluetooth pairing loses its entities."""
     await setup_integration(hass)
-    assert {entity_id for entity_id, *_ in ENTITY_COMMANDS} <= _entity_ids(
-        hass, config_entry
-    )
+    assert _entity_ids(hass, config_entry) == {
+        entity_id for entity_id, *_ in ENTITY_COMMANDS
+    } | {f"button.test_car_{name}_bluetooth" for name, *_ in SWITCH_BUTTONS}
 
     # Removing the Bluetooth subentry reloads Teslemetry with a cloud-only car.
     teslemetry.runtime_data = SimpleNamespace(

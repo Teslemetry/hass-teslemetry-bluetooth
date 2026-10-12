@@ -1,10 +1,13 @@
 """Tests for the Teslemetry Bluetooth Commands buttons."""
 
+import inspect
 from typing import Any
 
 from bleak.exc import BleakError
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 from tesla_fleet_api.const import AutoSeat
+from tesla_fleet_api.tesla.vehicle.bluetooth import VehicleBluetooth
 
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
@@ -103,6 +106,9 @@ async def test_switch_button_press(
     """Each switch button sends its command over Bluetooth only."""
     await setup_integration(hass)
 
+    # The library's Bluetooth vehicle accepts these arguments.
+    inspect.signature(getattr(VehicleBluetooth, command)).bind(None, **kwargs)
+
     await _press(hass, _entity_id(name))
     getattr(teslemetry.bluetooth, command).assert_awaited_once_with(**kwargs)
     teslemetry.assert_cloud_unused()
@@ -190,3 +196,27 @@ async def test_guest_mode_streaming_only(
         assert (entity_registry.async_get(entity_id) is not None) is created
     # Teslemetry has every other switch for every vehicle.
     assert entity_registry.async_get(_entity_id("sentry_mode_on")) is not None
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_guest_mode_removed_when_polled(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    teslemetry: FakeTeslemetry,
+    teslemetry_entry: MockConfigEntry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Guest mode buttons go when Teslemetry stops streaming the car."""
+    await setup_integration(hass)
+    assert entity_registry.async_get(GUEST_MODE_ON) is not None
+
+    # Teslemetry reloads with the car polled; this integration reloads too.
+    teslemetry.poll = True
+    assert await hass.config_entries.async_reload(teslemetry_entry.entry_id)
+    await hass.async_block_till_done()
+
+    for entity_id in (GUEST_MODE_ON, GUEST_MODE_OFF):
+        assert entity_registry.async_get(entity_id) is None
+        assert hass.states.get(entity_id) is None
+    assert hass.states.get(_entity_id("sentry_mode_on")) is not None
+    teslemetry.assert_cloud_unused()
