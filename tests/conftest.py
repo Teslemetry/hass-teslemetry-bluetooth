@@ -1,7 +1,8 @@
 """Fixtures for Teslemetry Bluetooth Commands tests."""
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -34,6 +35,53 @@ def auto_enable_custom_integrations(
     yield
 
 
+class FakeCoordinator:
+    """A stand-in for Teslemetry's vehicle data coordinator."""
+
+    def __init__(self) -> None:
+        """Initialize with no vehicle data."""
+        self.data: dict[str, Any] = {}
+        self.listeners: list[Callable[[], None]] = []
+
+    def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
+        """Add a listener."""
+        self.listeners.append(listener)
+        return lambda: self.listeners.remove(listener)
+
+    def async_set_updated_data(self, data: dict[str, Any]) -> None:
+        """Replace the data and notify listeners."""
+        self.data = data
+        for listener in list(self.listeners):
+            listener()
+
+
+class FakeStream:
+    """A stand-in for Teslemetry's TeslemetryStream."""
+
+    def __init__(self) -> None:
+        """Initialize with no listeners."""
+        self.listeners: list[
+            tuple[Callable[[dict[str, Any]], None], dict[str, Any], bool]
+        ] = []
+
+    def async_add_listener(
+        self,
+        callback: Callable[[dict[str, Any]], None],
+        filters: dict[str, Any],
+        internal: bool = False,
+    ) -> Callable[[], None]:
+        """Add a listener."""
+        listener = (callback, filters, internal)
+        self.listeners.append(listener)
+        return lambda: self.listeners.remove(listener)
+
+    def send(self, data: dict[str, Any]) -> None:
+        """Stream vehicle data to each listener whose filter matches."""
+        for callback, filters, _ in list(self.listeners):
+            if filters["vin"] == VIN and filters["data"].keys() <= data.keys():
+                callback({"vin": VIN, "data": data})
+
+
 class FakeTeslemetry:
     """A Teslemetry stand-in whose runtime data matches core 2026.10.0."""
 
@@ -45,6 +93,13 @@ class FakeTeslemetry:
         # Any call on the cloud backend is recorded in cloud.mock_calls.
         self.cloud = self.make_backend("cloud")
         self.runtime_data: SimpleNamespace | None = None
+        # Teslemetry streams this vehicle unless poll is set or firmware is old.
+        self.poll = False
+        self.firmware = "2026.20.1"
+        self.coordinator = FakeCoordinator()
+        self.stream = FakeStream()
+        # Only the stream is set: the vehicle's listen_* helpers call the cloud.
+        self.stream_vehicle = SimpleNamespace(stream=self.stream)
 
     @staticmethod
     def make_backend(name: str) -> MagicMock:
@@ -60,6 +115,10 @@ class FakeTeslemetry:
         vehicle = SimpleNamespace(
             api=router,
             vin=VIN,
+            poll=self.poll,
+            firmware=self.firmware,
+            coordinator=self.coordinator,
+            stream_vehicle=self.stream_vehicle,
             device=DeviceInfo(identifiers={("teslemetry", VIN)}, name="Test Car"),
         )
         return SimpleNamespace(vehicles=[vehicle])

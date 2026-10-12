@@ -78,6 +78,10 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
             for command in COMMANDS:
                 if not callable(getattr(primary, command, None)):
                     raise IncompatibleTeslemetry(f"Bluetooth vehicle.{command}")
+            # The numbers read the car's own maximums from these.
+            for attr in ("poll", "firmware", "coordinator", "stream_vehicle"):
+                if not hasattr(vehicle_data, attr):
+                    raise IncompatibleTeslemetry(f"vehicle.{attr}")
             device = device_registry.async_get_device_by_identifier(
                 (TESLEMETRY_DOMAIN, vehicle_data.vin), teslemetry_entry.entry_id
             )
@@ -98,7 +102,7 @@ def _bluetooth_vehicles(hass: HomeAssistant) -> dict[str, TeslemetryBluetoothVeh
                 )
                 continue
             vehicles[vehicle_data.vin] = TeslemetryBluetoothVehicle(
-                api, vehicle_data.vin, device
+                api, vehicle_data.vin, device, vehicle_data
             )
     return vehicles
 
