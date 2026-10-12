@@ -23,6 +23,7 @@ from .conftest import VIN, FakeTeslemetry, setup_integration
 
 CHARGE_LIMIT = "number.test_car_charge_limit_bluetooth"
 CHARGING_AMPS = "number.test_car_charging_amps_bluetooth"
+VOLUME = "number.test_car_volume_bluetooth"
 
 
 def _limits(hass: HomeAssistant, entity_id: str) -> tuple[float, float]:
@@ -178,3 +179,33 @@ async def test_listeners_removed_on_unload(
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert teslemetry.coordinator.listeners == []
     assert teslemetry.stream.listeners == []
+
+
+@pytest.mark.usefixtures(
+    "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
+)
+async def test_volume(hass: HomeAssistant, teslemetry: FakeTeslemetry) -> None:
+    """Volume keeps the fraction of a step and uses the car's own scale."""
+    await setup_integration(hass)
+
+    assert _limits(hass, VOLUME) == (0, pytest.approx(31 / 3))
+    assert hass.states.get(VOLUME).state == STATE_UNKNOWN
+
+    await hass.services.async_call(
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_ENTITY_ID: VOLUME, ATTR_VALUE: 14 / 3},
+        blocking=True,
+    )
+    teslemetry.bluetooth.adjust_volume.assert_awaited_once_with(volume=14 / 3)
+
+    # Above the car's scale: never sent.
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            NUMBER_DOMAIN,
+            SERVICE_SET_VALUE,
+            {ATTR_ENTITY_ID: VOLUME, ATTR_VALUE: 11},
+            blocking=True,
+        )
+    teslemetry.bluetooth.adjust_volume.assert_awaited_once()
+    teslemetry.assert_cloud_unused()

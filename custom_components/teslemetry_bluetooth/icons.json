@@ -5,11 +5,15 @@
       "charge_start": { "default": "mdi:play" },
       "charge_stop": { "default": "mdi:stop" },
       "door_lock": { "default": "mdi:car-door-lock" },
-      "door_unlock": { "default": "mdi:car-door-lock-open" }
+      "door_unlock": { "default": "mdi:car-door-lock-open" },
+      "media_toggle_playback": { "default": "mdi:play-pause" },
+      "media_next_track": { "default": "mdi:skip-next" },
+      "media_prev_track": { "default": "mdi:skip-previous" }
     },
     "number": {
       "set_charge_limit": { "default": "mdi:battery-charging-80" },
-      "set_charging_amps": { "default": "mdi:current-ac" }
+      "set_charging_amps": { "default": "mdi:current-ac" },
+      "adjust_volume": { "default": "mdi:volume-high" }
     }
   }
 }
