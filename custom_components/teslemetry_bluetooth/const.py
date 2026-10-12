@@ -75,6 +75,9 @@ COMMANDS: Final = (
     "set_bioweapon_mode",
     "set_cabin_overheat_protection",
     "set_cop_temp",
+    "remote_seat_heater_request",
+    "remote_steering_wheel_heat_level_request",
+    "remote_seat_cooler_request",
 )
 
 # Vehicle command results that mean the car is already in the requested state.

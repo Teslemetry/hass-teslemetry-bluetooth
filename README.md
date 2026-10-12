@@ -79,12 +79,23 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 | Bioweapon defense off (Bluetooth) | Button, only for cars whose climate Teslemetry polls | No |
 | Cabin overheat protection (Bluetooth) | Select (Off, On, Fan only) | No |
 | Cabin overheat protection temperature (Bluetooth) | Select (30, 35 or 40 °C), only for cars that support it | No |
+| Seat heater front left (Bluetooth) | Select (Off, Low, Medium, High) | No |
+| Seat heater front right (Bluetooth) | Select (Off, Low, Medium, High) | No |
+| Seat heater rear left (Bluetooth) | Select (Off, Low, Medium, High), only for cars with rear seat heaters | No |
+| Seat heater rear center (Bluetooth) | Select (Off, Low, Medium, High), only for cars with a heated rear center seat | No |
+| Seat heater rear right (Bluetooth) | Select (Off, Low, Medium, High), only for cars with rear seat heaters | No |
+| Seat heater third row left (Bluetooth) | Select (Off, Low, Medium, High), only for cars with a heated third row | No |
+| Seat heater third row right (Bluetooth) | Select (Off, Low, Medium, High), only for cars with a heated third row | No |
+| Steering wheel heater (Bluetooth) | Select (Off, Low, High) | No |
+| Seat cooler front left (Bluetooth) | Select (Off, Low, Medium, High), only for cars with seat cooling | No |
+| Seat cooler front right (Bluetooth) | Select (Off, Low, Medium, High), only for cars with seat cooling | No |
 
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
 - The entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state, switch states and climate state stay on the Teslemetry entities. The numbers and selects always show `unknown`.
 - Charging amps and Charge limit use the car's own maximum from Teslemetry's data, the same value Teslemetry's own numbers use. While Teslemetry has no value, the maximum is 48 A and 100 %. This integration never asks the cloud for the value, so a streaming car sends it only while Teslemetry's own Charging amps entity is enabled.
 - Target temperature sets both the driver and the passenger temperature. For a car whose climate Teslemetry polls, its range is the car's own range from Teslemetry's data. For any other car, the range is 15-28 °C.
 - Bioweapon defense and Cabin overheat protection temperature follow the Teslemetry climate entities: they are added only to cars where Teslemetry offers bioweapon defense or the cabin overheat protection temperature.
+- The seat heater, seat cooler and steering wheel heater selects are added only where Teslemetry added its own select for the same seat or for the steering wheel. For any level above Off, they first turn climate on if Teslemetry's data shows climate off, as Teslemetry's selects do.
 - Wake sends only the Bluetooth wake signal. The car can take a few more seconds to answer other commands after it wakes. The button never wakes the car through the cloud.
 - Flash lights, Honk horn, Play fart, Homelink, Keyless driving and Install update are added only where Teslemetry added its own entity for the same command. They are disabled by default.
 - Homelink sends the Home Assistant home location, as Teslemetry does.
