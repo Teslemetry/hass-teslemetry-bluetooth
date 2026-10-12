@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, override
 
-from tesla_fleet_api import firmware_at_least
-
 from homeassistant.components.number import (
     NumberDeviceClass,
     NumberEntity,
@@ -124,9 +122,8 @@ class TeslemetryBluetoothNumberEntity(TeslemetryBluetoothEntity, RestoreNumber):
         """Follow the car's own maximum."""
         await super().async_added_to_hass()
         data = self.vehicle.data
-        # Teslemetry reads polled vehicles and old firmware from its vehicle
-        # coordinator, and every other vehicle from its stream.
-        if data.poll or not firmware_at_least(data.firmware, "2024.26"):
+        # Teslemetry reads a vehicle it does not stream from its coordinator.
+        if not self.vehicle.streaming:
             self._update_max_from_coordinator()
             self.async_on_remove(
                 data.coordinator.async_add_listener(self._handle_coordinator_update)

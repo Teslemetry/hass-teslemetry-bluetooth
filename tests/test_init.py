@@ -495,7 +495,9 @@ async def test_unpaired_vehicle_entities_removed(
 ) -> None:
     """A vehicle that loses its Bluetooth pairing loses its entities."""
     await setup_integration(hass)
-    assert len(_entity_ids(hass, config_entry)) == len(ENTITY_COMMANDS)
+    assert {entity_id for entity_id, *_ in ENTITY_COMMANDS} <= _entity_ids(
+        hass, config_entry
+    )
 
     # Removing the Bluetooth subentry reloads Teslemetry with a cloud-only car.
     teslemetry.runtime_data = SimpleNamespace(

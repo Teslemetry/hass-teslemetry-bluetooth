@@ -35,6 +35,48 @@
       },
       "media_prev_track": {
         "name": "Previous track (Bluetooth)"
+      },
+      "vehicle_state_sentry_mode_on": {
+        "name": "Sentry mode on (Bluetooth)"
+      },
+      "vehicle_state_sentry_mode_off": {
+        "name": "Sentry mode off (Bluetooth)"
+      },
+      "vehicle_state_valet_mode_on": {
+        "name": "Valet mode on (Bluetooth)"
+      },
+      "vehicle_state_valet_mode_off": {
+        "name": "Valet mode off (Bluetooth)"
+      },
+      "climate_state_auto_seat_climate_left_on": {
+        "name": "Auto seat climate left on (Bluetooth)"
+      },
+      "climate_state_auto_seat_climate_left_off": {
+        "name": "Auto seat climate left off (Bluetooth)"
+      },
+      "climate_state_auto_seat_climate_right_on": {
+        "name": "Auto seat climate right on (Bluetooth)"
+      },
+      "climate_state_auto_seat_climate_right_off": {
+        "name": "Auto seat climate right off (Bluetooth)"
+      },
+      "climate_state_auto_steering_wheel_heat_on": {
+        "name": "Auto steering wheel heater on (Bluetooth)"
+      },
+      "climate_state_auto_steering_wheel_heat_off": {
+        "name": "Auto steering wheel heater off (Bluetooth)"
+      },
+      "climate_state_defrost_mode_on": {
+        "name": "Defrost on (Bluetooth)"
+      },
+      "climate_state_defrost_mode_off": {
+        "name": "Defrost off (Bluetooth)"
+      },
+      "guest_mode_enabled_on": {
+        "name": "Guest mode on (Bluetooth)"
+      },
+      "guest_mode_enabled_off": {
+        "name": "Guest mode off (Bluetooth)"
       }
     },
     "number": {

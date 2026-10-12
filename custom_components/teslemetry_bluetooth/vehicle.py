@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from bleak.exc import BleakError
+from tesla_fleet_api import firmware_at_least
 from tesla_fleet_api.exceptions import TeslaFleetError
 from tesla_fleet_api.router import VehicleRouter
 
@@ -37,13 +38,20 @@ class TeslemetryBluetoothVehicle:
         """Initialize the vehicle."""
         self.router = router
         self.vin = vin
-        # Teslemetry's TeslemetryVehicleData, read only for the car's own limits.
+        # Teslemetry's TeslemetryVehicleData, read only for the car's own limits
+        # and whether Teslemetry streams the car.
         self.data = data
         # Teslemetry's own device for the vehicle; entities attach to it.
         self.device = device
         self.name = device.name_by_user or device.name or vin
         self.in_range = False
         self._listeners: list[Callable[[], None]] = []
+
+    @property
+    def streaming(self) -> bool:
+        """Return if Teslemetry reads this vehicle from its stream."""
+        # Teslemetry polls a vehicle set to poll, or with older firmware.
+        return not self.data.poll and firmware_at_least(self.data.firmware, "2024.26")
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> CALLBACK_TYPE:
