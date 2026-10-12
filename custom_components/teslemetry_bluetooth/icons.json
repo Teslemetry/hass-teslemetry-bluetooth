@@ -1,0 +1,17 @@
+{
+  "entity": {
+    "button": {
+      "charge_start": { "default": "mdi:play" },
+      "charge_stop": { "default": "mdi:stop" },
+      "door_lock": { "default": "mdi:car-door-lock" },
+      "door_unlock": { "default": "mdi:car-door-lock-open" }
+    },
+    "number": {
+      "set_charge_limit": { "default": "mdi:battery-charging-80" },
+      "set_charging_amps": { "default": "mdi:current-ac" }
+    }
+  },
+  "services": {
+    "send_command": { "service": "mdi:bluetooth-transfer" }
+  }
+}

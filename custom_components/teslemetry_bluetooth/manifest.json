@@ -1,0 +1,14 @@
+{
+  "domain": "teslemetry_bluetooth",
+  "name": "Teslemetry Bluetooth Commands",
+  "codeowners": ["@Bre77"],
+  "config_flow": true,
+  "dependencies": ["teslemetry"],
+  "documentation": "https://github.com/Teslemetry/hass-teslemetry-bluetooth",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Teslemetry/hass-teslemetry-bluetooth/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

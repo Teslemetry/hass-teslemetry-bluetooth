@@ -1,0 +1,24 @@
+send_command:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: teslemetry
+    command:
+      required: true
+      selector:
+        select:
+          translation_key: command
+          options:
+            - charge_start
+            - charge_stop
+            - set_charge_limit
+            - set_charging_amps
+            - door_lock
+            - door_unlock
+    arguments:
+      required: false
+      example: '{"percent": 80}'
+      selector:
+        object:
