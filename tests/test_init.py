@@ -47,6 +47,21 @@ START_CHARGING = "button.test_car_start_charging_bluetooth"
 STOP_CHARGING = "button.test_car_stop_charging_bluetooth"
 LOCK = "button.test_car_lock_bluetooth"
 UNLOCK = "button.test_car_unlock_bluetooth"
+FLASH_LIGHTS = "button.test_car_flash_lights_bluetooth"
+HONK_HORN = "button.test_car_honk_horn_bluetooth"
+PLAY_FART = "button.test_car_play_fart_bluetooth"
+HOMELINK = "button.test_car_homelink_bluetooth"
+KEYLESS_DRIVING = "button.test_car_keyless_driving_bluetooth"
+INSTALL_UPDATE = "button.test_car_install_update_bluetooth"
+# The buttons added only where Teslemetry has its own entity for the command.
+FOLLOWING_BUTTONS = (
+    FLASH_LIGHTS,
+    HONK_HORN,
+    PLAY_FART,
+    HOMELINK,
+    KEYLESS_DRIVING,
+    INSTALL_UPDATE,
+)
 CHARGE_LIMIT = "number.test_car_charge_limit_bluetooth"
 CHARGING_AMPS = "number.test_car_charging_amps_bluetooth"
 PLAY_PAUSE = "button.test_car_play_pause_bluetooth"
@@ -61,6 +76,27 @@ ENTITY_COMMANDS = [
     (STOP_CHARGING, BUTTON_DOMAIN, SERVICE_PRESS, {}, "charge_stop", {}),
     (LOCK, BUTTON_DOMAIN, SERVICE_PRESS, {}, "door_lock", {}),
     (UNLOCK, BUTTON_DOMAIN, SERVICE_PRESS, {}, "door_unlock", {}),
+    (FLASH_LIGHTS, BUTTON_DOMAIN, SERVICE_PRESS, {}, "flash_lights", {}),
+    (HONK_HORN, BUTTON_DOMAIN, SERVICE_PRESS, {}, "honk_horn", {}),
+    (PLAY_FART, BUTTON_DOMAIN, SERVICE_PRESS, {}, "remote_boombox", {"sound": 0}),
+    (
+        HOMELINK,
+        BUTTON_DOMAIN,
+        SERVICE_PRESS,
+        {},
+        "trigger_homelink",
+        # The test Home Assistant's home location.
+        {"lat": 32.87336, "lon": -117.22743},
+    ),
+    (KEYLESS_DRIVING, BUTTON_DOMAIN, SERVICE_PRESS, {}, "remote_start_drive", {}),
+    (
+        INSTALL_UPDATE,
+        BUTTON_DOMAIN,
+        SERVICE_PRESS,
+        {},
+        "schedule_software_update",
+        {"offset_sec": 0},
+    ),
     (
         CHARGE_LIMIT,
         NUMBER_DOMAIN,
@@ -134,6 +170,7 @@ async def test_entities(
         (NEXT_TRACK, False),
         (PREVIOUS_TRACK, False),
         (VOLUME, False),
+        *((entity_id, False) for entity_id in FOLLOWING_BUTTONS),
     ):
         entry = entity_registry.async_get(entity_id)
         assert entry is not None, entity_id
@@ -171,6 +208,22 @@ async def test_entity_command_in_range(
         domain, service, {ATTR_ENTITY_ID: entity_id, **data}, blocking=True
     )
     getattr(teslemetry.bluetooth, command).assert_awaited_once_with(**kwargs)
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures(
+    "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
+)
+async def test_buttons_follow_teslemetry_entities(
+    hass: HomeAssistant, teslemetry: FakeTeslemetry
+) -> None:
+    """A button is added only where Teslemetry added the same command's entity."""
+    teslemetry.entities = (("button", "honk"),)
+    await setup_integration(hass)
+
+    for entity_id in FOLLOWING_BUTTONS:
+        assert (hass.states.get(entity_id) is not None) is (entity_id == HONK_HORN)
+    assert hass.states.get(WAKE) is not None
     teslemetry.assert_cloud_unused()
 
 
@@ -302,6 +355,41 @@ async def test_command_refused(
             BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: STOP_CHARGING}, blocking=True
         )
     assert exc.value.translation_key == translation_key
+    teslemetry.assert_cloud_unused()
+
+
+@pytest.mark.usefixtures(
+    "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
+)
+@pytest.mark.parametrize(
+    ("entity_id", "command"),
+    [
+        (entity_id, command)
+        for entity_id, _, _, _, command, _ in ENTITY_COMMANDS
+        if entity_id in FOLLOWING_BUTTONS
+    ],
+)
+async def test_following_button_errors(
+    hass: HomeAssistant, teslemetry: FakeTeslemetry, entity_id: str, command: str
+) -> None:
+    """A failed or refused press raises an error and never reaches the cloud."""
+    await setup_integration(hass)
+    mock = getattr(teslemetry.bluetooth, command)
+
+    mock.side_effect = BluetoothTimeout()
+    with pytest.raises(HomeAssistantError) as exc:
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
+        )
+    assert exc.value.translation_key == "bluetooth_failed"
+
+    mock.side_effect = None
+    mock.return_value = {"response": {"result": False, "reason": "not_available"}}
+    with pytest.raises(HomeAssistantError) as exc:
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
+        )
+    assert exc.value.translation_key == "command_failed"
     teslemetry.assert_cloud_unused()
 
 

@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING, Any, override
 from tesla_fleet_api.const import AutoSeat
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.components.button.const import ButtonDeviceClass
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, TESLEMETRY_DOMAIN
 from .entity import TeslemetryBluetoothEntity
 from .vehicle import TeslemetryBluetoothVehicle
 
@@ -29,7 +30,12 @@ class TeslemetryBluetoothButtonEntityDescription(ButtonEntityDescription):
     # The Bluetooth command, when it is not the key.
     command: str | None = None
     arguments: Mapping[str, Any] = field(default_factory=dict)
+    # Arguments built when the button is pressed, added to the fixed ones.
+    arguments_fn: Callable[[HomeAssistant], Mapping[str, Any]] | None = None
     supported_fn: Callable[[TeslemetryBluetoothVehicle], bool] = lambda _: True
+    # Teslemetry's own entity for the same command, as (platform, key). The
+    # button is added only where Teslemetry added that entity for the vehicle.
+    teslemetry_entity: tuple[Platform, str] | None = None
 
 
 def _on_off(
@@ -106,6 +112,45 @@ DESCRIPTIONS: tuple[TeslemetryBluetoothButtonEntityDescription, ...] = (
         "enable",
         supported_fn=lambda vehicle: vehicle.streaming,
     ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="flash_lights",
+        teslemetry_entity=(Platform.BUTTON, "flash_lights"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="honk_horn",
+        teslemetry_entity=(Platform.BUTTON, "honk"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="remote_boombox",
+        arguments={"sound": 0},
+        teslemetry_entity=(Platform.BUTTON, "boombox"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="trigger_homelink",
+        # Like Teslemetry, send the Home Assistant home location.
+        arguments_fn=lambda hass: {
+            "lat": hass.config.latitude,
+            "lon": hass.config.longitude,
+        },
+        teslemetry_entity=(Platform.BUTTON, "homelink"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="remote_start_drive",
+        teslemetry_entity=(Platform.BUTTON, "enable_keyless_driving"),
+        entity_registry_enabled_default=False,
+    ),
+    TeslemetryBluetoothButtonEntityDescription(
+        key="schedule_software_update",
+        # An offset of 0 starts the install now, as Teslemetry's update does.
+        arguments={"offset_sec": 0},
+        teslemetry_entity=(Platform.UPDATE, "vehicle_state_software_update_status"),
+        device_class=ButtonDeviceClass.UPDATE,
+        entity_registry_enabled_default=False,
+    ),
 )
 
 
@@ -119,10 +164,19 @@ async def async_setup_entry(
     entities: list[TeslemetryBluetoothButtonEntity] = []
     for vehicle in entry.runtime_data.values():
         for description in DESCRIPTIONS:
-            if description.supported_fn(vehicle):
+            if description.supported_fn(vehicle) and (
+                description.teslemetry_entity is None
+                or entity_registry.async_get_entity_id(
+                    description.teslemetry_entity[0],
+                    TESLEMETRY_DOMAIN,
+                    f"{vehicle.vin}-{description.teslemetry_entity[1]}",
+                )
+                is not None
+            ):
                 entities.append(TeslemetryBluetoothButtonEntity(vehicle, description))
             # Remove a button the vehicle had before, such as Guest mode on a
-            # car that Teslemetry no longer streams.
+            # car that Teslemetry no longer streams, or a button whose
+            # Teslemetry entity is gone.
             elif entity_id := entity_registry.async_get_entity_id(
                 Platform.BUTTON, DOMAIN, f"{vehicle.vin}-bluetooth-{description.key}"
             ):
@@ -148,6 +202,9 @@ class TeslemetryBluetoothButtonEntity(TeslemetryBluetoothEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Send the command."""
         description = self.entity_description
+        arguments = dict(description.arguments)
+        if description.arguments_fn is not None:
+            arguments.update(description.arguments_fn(self.hass))
         await self.vehicle.async_send(
-            description.command or description.key, **description.arguments
+            description.command or description.key, **arguments
         )
