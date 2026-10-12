@@ -371,21 +371,6 @@ async def test_send_command_unpaired_device(
             SimpleNamespace(vehicles=[SimpleNamespace(vin=VIN, device={})]),
             id="no_api",
         ),
-        pytest.param(
-            SimpleNamespace(
-                vehicles=[
-                    SimpleNamespace(
-                        api=None,
-                        vin=VIN,
-                        poll=False,
-                        firmware="2026.20.1",
-                        stream_vehicle=None,
-                        device={},
-                    )
-                ]
-            ),
-            id="no_coordinator",
-        ),
     ],
 )
 async def test_incompatible_teslemetry(
@@ -448,6 +433,24 @@ async def test_incompatible_router(
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
     assert issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
+
+
+@pytest.mark.usefixtures("teslemetry_entry")
+async def test_incompatible_vehicle_data(
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+    teslemetry: FakeTeslemetry,
+    config_entry: MockConfigEntry,
+) -> None:
+    """A Bluetooth vehicle without its coordinator raises the repair."""
+    teslemetry.runtime_data = teslemetry.build_runtime_data()
+    del teslemetry.runtime_data.vehicles[0].coordinator
+    await setup_integration(hass)
+
+    assert config_entry.state is ConfigEntryState.SETUP_ERROR
+    issue = issue_registry.async_get_issue(DOMAIN, ISSUE_INCOMPATIBLE_TESLEMETRY)
+    assert issue is not None
+    assert issue.translation_placeholders["missing"] == "vehicle.coordinator"
 
 
 @pytest.mark.usefixtures("teslemetry_entry", "config_entry")
