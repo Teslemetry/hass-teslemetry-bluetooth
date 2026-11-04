@@ -17,9 +17,11 @@ The Teslemetry integration must be loaded. If Teslemetry cannot start (for examp
 
 ## Installation
 
-1. Add this repository to HACS as a custom repository (category: Integration), or copy `custom_components/teslemetry_bluetooth` into your `config/custom_components` folder.
+1. In HACS, search for **Teslemetry Bluetooth Commands** and download it.
 2. Restart Home Assistant.
 3. Go to **Settings > Devices & services > Add integration** and add **Teslemetry Bluetooth Commands**.
+
+If the search does not find it, add this repository to HACS as a custom repository (category: Integration), or copy `custom_components/teslemetry_bluetooth` into your `config/custom_components` folder.
 
 One entry covers every Teslemetry account and every vehicle that is paired over Bluetooth.
 
