@@ -134,6 +134,31 @@ async def test_failed_read_keeps_value(
     teslemetry.assert_cloud_unused()
 
 
+@pytest.mark.usefixtures(
+    "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
+)
+async def test_vehicle_state_error_not_read(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+    teslemetry: FakeTeslemetry,
+) -> None:
+    """A VCSEC error instead of a status sends no read and keeps the last value."""
+    teslemetry.bluetooth.vehicle_state.return_value = sleep_status(asleep=False)
+    await setup_integration(hass)
+    assert hass.states.get(CHARGE_ON_SOLAR).state == STATE_OFF
+
+    teslemetry.bluetooth.vehicle_state.return_value = {
+        "result": False,
+        "reason": "GENERICERROR_UNKNOWN",
+    }
+    await _tick(hass, freezer, CHARGE_ON_SOLAR_INTERVAL)
+    assert hass.states.get(CHARGE_ON_SOLAR).state == STATE_OFF
+    assert "Update for" not in caplog.text
+    teslemetry.bluetooth.get_charge_on_solar.assert_awaited_once()
+    teslemetry.bluetooth.wake_up.assert_not_awaited()
+
+
 @pytest.mark.usefixtures("teslemetry_entry", "config_entry")
 async def test_disabled_by_default(
     hass: HomeAssistant, entity_registry: er.EntityRegistry, teslemetry: FakeTeslemetry

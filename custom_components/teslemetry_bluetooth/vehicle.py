@@ -7,7 +7,7 @@ from bleak.exc import BleakError
 from tesla_fleet_api import firmware_at_least
 from tesla_fleet_api.exceptions import TeslaFleetError
 from tesla_fleet_api.router import VehicleRouter
-from tesla_protocol.command.vcsec_pb2 import VehicleSleepStatus_E
+from tesla_protocol.command.vcsec_pb2 import VehicleSleepStatus_E, VehicleStatus
 
 from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -106,8 +106,10 @@ class TeslemetryBluetoothVehicle:
             # The read is an infotainment request, which the Bluetooth backend
             # wakes a sleeping car to answer, so read only an awake car.
             status = await primary.vehicle_state()
+            # A VCSEC error comes back as a result dict instead of a status.
             if (
-                status.vehicleSleepStatus
+                not isinstance(status, VehicleStatus)
+                or status.vehicleSleepStatus
                 != VehicleSleepStatus_E.VEHICLE_SLEEP_STATUS_AWAKE
             ):
                 LOGGER.debug(
