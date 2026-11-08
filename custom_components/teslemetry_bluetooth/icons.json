@@ -1,5 +1,8 @@
 {
   "entity": {
+    "binary_sensor": {
+      "charge_on_solar": { "default": "mdi:solar-power" }
+    },
     "button": {
       "wake_up": { "default": "mdi:sleep-off" },
       "charge_start": { "default": "mdi:play" },

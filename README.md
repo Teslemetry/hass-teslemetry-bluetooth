@@ -91,9 +91,11 @@ The entities are added to each Bluetooth-paired vehicle's existing Teslemetry de
 | Steering wheel heater (Bluetooth) | Select (Off, Low, High) | No |
 | Seat cooler front left (Bluetooth) | Select (Off, Low, Medium, High), only for cars with seat cooling | No |
 | Seat cooler front right (Bluetooth) | Select (Off, Low, Medium, High), only for cars with seat cooling | No |
+| Charge on solar (Bluetooth) | Binary sensor, only for cars with Teslemetry's Charge on solar switch | No |
 
 - The entities are available only while the vehicle is in Bluetooth range, as reported by Teslemetry. Range is checked every 10 seconds and before each command.
-- The entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state, switch states and climate state stay on the Teslemetry entities. The numbers and selects always show `unknown`.
+- Apart from Charge on solar, the entities only send commands. They show no vehicle state: the current charge limit, charging state, lock state, switch states and climate state stay on the Teslemetry entities. The numbers and selects always show `unknown`.
+- Charge on solar reads whether the car has charge on solar on, over Bluetooth only. It reads the car when it is added, when the car comes into Bluetooth range and every 20 minutes, and only while the car reports that it is awake: it never wakes the car. It shows the last value it read, or `unknown` until the first read. It is disabled by default and sends nothing while disabled.
 - Charging amps and Charge limit use the car's own maximum from Teslemetry's data, the same value Teslemetry's own numbers use. While Teslemetry has no value, the maximum is 48 A and 100 %. This integration never asks the cloud for the value, so a streaming car sends it only while Teslemetry's own Charging amps entity is enabled.
 - Target temperature sets both the driver and the passenger temperature. For a car whose climate Teslemetry polls, its range is the car's own range from Teslemetry's data. For any other car, the range is 15-28 °C.
 - Bioweapon defense and Cabin overheat protection temperature follow the Teslemetry climate entities: they are added only to cars where Teslemetry offers bioweapon defense or the cabin overheat protection temperature.

@@ -19,6 +19,10 @@ ISSUE_INCOMPATIBLE_TESLEMETRY: Final = "incompatible_teslemetry"
 
 # How often Teslemetry's own in-range check is re-read to update availability.
 RANGE_CHECK_INTERVAL: Final = timedelta(seconds=10)
+# How often charge on solar is read while the car is in range and awake. It is
+# longer than the 15 idle minutes Teslemetry leaves a car to fall asleep, so
+# the reads alone do not keep an idle car awake.
+CHARGE_ON_SOLAR_INTERVAL: Final = timedelta(minutes=20)
 
 CHARGE_LIMIT_MIN: Final = 50
 CHARGE_LIMIT_MAX: Final = 100

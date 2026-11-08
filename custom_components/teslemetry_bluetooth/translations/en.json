@@ -11,6 +11,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "charge_on_solar": {
+        "name": "Charge on solar (Bluetooth)"
+      }
+    },
     "button": {
       "wake_up": {
         "name": "Wake (Bluetooth)"

@@ -35,7 +35,12 @@ from .const import (
 )
 from .vehicle import TeslemetryBluetoothVehicle
 
-PLATFORMS: Final = [Platform.BUTTON, Platform.NUMBER, Platform.SELECT]
+PLATFORMS: Final = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SELECT,
+]
 
 type TeslemetryBluetoothConfigEntry = ConfigEntry[dict[str, TeslemetryBluetoothVehicle]]
 
