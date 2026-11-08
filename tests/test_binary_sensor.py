@@ -87,10 +87,10 @@ async def test_asleep_not_read(
 @pytest.mark.usefixtures(
     "teslemetry_entry", "config_entry", "entity_registry_enabled_by_default"
 )
-async def test_read_when_back_in_range(
+async def test_read_on_interval_after_back_in_range(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory, teslemetry: FakeTeslemetry
 ) -> None:
-    """Out of range nothing is sent; the car is read when it comes back."""
+    """Out of range nothing is sent; back in range the car waits for the interval."""
     teslemetry.in_range = False
     await setup_integration(hass)
     assert hass.states.get(CHARGE_ON_SOLAR).state == STATE_UNAVAILABLE
@@ -99,6 +99,11 @@ async def test_read_when_back_in_range(
     teslemetry.bluetooth.vehicle_state.return_value = sleep_status(asleep=False)
     teslemetry.in_range = True
     await _tick(hass, freezer, RANGE_CHECK_INTERVAL)
+    assert hass.states.get(CHARGE_ON_SOLAR).state == STATE_UNKNOWN
+    teslemetry.bluetooth.vehicle_state.assert_not_awaited()
+    teslemetry.bluetooth.get_charge_on_solar.assert_not_awaited()
+
+    await _tick(hass, freezer, CHARGE_ON_SOLAR_INTERVAL - RANGE_CHECK_INTERVAL)
     assert hass.states.get(CHARGE_ON_SOLAR).state == STATE_OFF
     teslemetry.bluetooth.get_charge_on_solar.assert_awaited_once()
     teslemetry.assert_cloud_unused()

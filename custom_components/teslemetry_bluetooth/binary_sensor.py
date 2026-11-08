@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, override
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -56,16 +56,9 @@ class TeslemetryBluetoothChargeOnSolarEntity(
 
     @override
     async def async_added_to_hass(self) -> None:
-        """Read the car when added and each time it comes into range."""
+        """Read the car when added."""
         await super().async_added_to_hass()
-        self.async_on_remove(self.vehicle.async_add_listener(self._async_range_changed))
         self.async_schedule_update_ha_state(True)
-
-    @callback
-    def _async_range_changed(self) -> None:
-        """Read the car when it comes into range."""
-        if self.vehicle.in_range:
-            self.async_schedule_update_ha_state(True)
 
     async def async_update(self) -> None:
         """Read charge on solar, keeping the last value if the car is not read."""
