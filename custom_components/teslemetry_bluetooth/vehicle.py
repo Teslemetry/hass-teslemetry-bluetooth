@@ -7,6 +7,7 @@ from bleak.exc import BleakError
 from tesla_fleet_api import firmware_at_least
 from tesla_fleet_api.exceptions import TeslaFleetError
 from tesla_fleet_api.router import VehicleRouter
+from tesla_protocol.command.vcsec_pb2 import VehicleSleepStatus_E, VehicleStatus
 
 from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -95,6 +96,41 @@ class TeslemetryBluetoothVehicle:
             for listener in list(self._listeners):
                 listener()
         return in_range
+
+    async def async_read_charge_on_solar(self) -> bool | None:
+        """Read if charge on solar is on, or return None if the car was not read."""
+        if not self.in_range:
+            return None
+        primary = self.router.primary
+        try:
+            # The read is an infotainment request, which the Bluetooth backend
+            # wakes a sleeping car to answer, so read only an awake car.
+            status = await primary.vehicle_state()
+            # A VCSEC error comes back as a result dict instead of a status.
+            if (
+                not isinstance(status, VehicleStatus)
+                or status.vehicleSleepStatus
+                != VehicleSleepStatus_E.VEHICLE_SLEEP_STATUS_AWAKE
+            ):
+                LOGGER.debug(
+                    "Vehicle %s is not awake; charge on solar not read", self.vin
+                )
+                return None
+            result = await primary.get_charge_on_solar()
+        except BLUETOOTH_ERRORS as err:
+            LOGGER.debug(
+                "Bluetooth read of charge on solar for %s failed: %s", self.vin, err
+            )
+            return None
+        LOGGER.debug("Bluetooth charge on solar result: %s", result)
+        response = result.get("response") if isinstance(result, dict) else None
+        if (
+            not isinstance(response, dict)
+            or response.get("result") is not True
+            or (feature := response.get("getChargeOnSolarFeatureResponse")) is None
+        ):
+            return None
+        return bool(feature.charge_on_solar.enabled)
 
     async def async_send(self, command: str, /, **kwargs: Any) -> None:
         """Send a command over Bluetooth only, raising if the car is not reached."""

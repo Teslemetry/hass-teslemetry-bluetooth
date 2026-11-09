@@ -15,6 +15,11 @@ from pytest_homeassistant_custom_component.common import (
 )
 from tesla_fleet_api.const import SunRoofCommand, Trunk, WindowCommand
 from tesla_fleet_api.router import VehicleRouter
+from tesla_protocol.command.car_server_pb2 import (
+    ChargeOnSolarFeature,
+    GetChargeOnSolarFeatureResponse,
+)
+from tesla_protocol.command.vcsec_pb2 import VehicleSleepStatus_E, VehicleStatus
 
 from custom_components.teslemetry_bluetooth.const import COMMANDS, DOMAIN
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigSubentryData
@@ -76,6 +81,30 @@ COVER_BUTTONS: list[tuple[str, str, dict[str, Any]]] = [
     (CLOSE_TONNEAU, "close_tonneau", {}),
     (STOP_TONNEAU, "stop_tonneau", {}),
 ]
+
+
+def sleep_status(*, asleep: bool) -> VehicleStatus:
+    """Return the VCSEC status of an asleep or awake car."""
+    return VehicleStatus(
+        vehicleSleepStatus=VehicleSleepStatus_E.VEHICLE_SLEEP_STATUS_ASLEEP
+        if asleep
+        else VehicleSleepStatus_E.VEHICLE_SLEEP_STATUS_AWAKE
+    )
+
+
+def charge_on_solar_result(*, enabled: bool) -> dict[str, Any]:
+    """Return the Bluetooth result of a charge on solar read."""
+    return {
+        "response": {
+            "result": True,
+            "reason": "",
+            "getChargeOnSolarFeatureResponse": GetChargeOnSolarFeatureResponse(
+                charge_on_solar=ChargeOnSolarFeature(
+                    enabled=enabled, lower_charge_limit=20, upper_charge_limit=80
+                )
+            ),
+        }
+    }
 
 
 @pytest.fixture(autouse=True)
@@ -162,6 +191,10 @@ class FakeTeslemetry:
         backend = MagicMock(name=name)
         for command in COMMANDS:
             setattr(backend, command, AsyncMock(return_value=SUCCESS))
+        backend.vehicle_state = AsyncMock(return_value=sleep_status(asleep=True))
+        backend.get_charge_on_solar = AsyncMock(
+            return_value=charge_on_solar_result(enabled=False)
+        )
         return backend
 
     def build_runtime_data(self) -> SimpleNamespace:
